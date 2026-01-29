@@ -2,7 +2,10 @@ package SearchMethod;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -17,6 +20,7 @@ import Improvement.IntraLocalSearch;
 import Improvement.FeasibilityPhase;
 import Perturbation.InsertionHeuristic;
 import Perturbation.Perturbation;
+import Perturbation.PerturbationType;
 import Solution.Solution;
 
 public class AILSII
@@ -46,9 +50,9 @@ public class AILSII
 	int iterator,iteratorMF;
 	long first,ini;
 	double timeAF,totalTime,time;
-	
-	Random rand=new Random();
-	
+
+	Random rand;  // Initialized with seed in constructor
+
 	HashMap<String,OmegaAdjustment>omegaSetup=new HashMap<String,OmegaAdjustment>();
 
 	double distanceLS;
@@ -87,6 +91,10 @@ public class AILSII
 		this.epsilon=config.getEpsilon();
 		this.stoppingCriterionType=config.getStoppingCriterionType();
 		this.idealDist=new IdealDist();
+
+		// Initialize random with seed for reproducibility
+		this.rand = new Random(config.getSeed());
+		System.out.println("Random seed: " + config.getSeed());
 		this.solution =new Solution(instance,config);
 		this.referenceSolution =new Solution(instance,config);
 		this.bestSolution =new Solution(instance,config);
@@ -129,7 +137,69 @@ public class AILSII
 				| ClassNotFoundException e) {
 			e.printStackTrace();
 		}
-		
+
+		// Load plugin if specified
+		if (config.getDestroyPlugin() != null && config.getDestroyClass() != null) {
+			try {
+				System.out.println("================================================================================");
+				System.out.println("[PLUGIN] Loading external destroy operator...");
+				System.out.println("[PLUGIN] JAR: " + config.getDestroyPlugin());
+				System.out.println("[PLUGIN] Class: " + config.getDestroyClass());
+
+				Perturbation plugin = loadPluginFromJar(
+					config.getDestroyPlugin(),
+					config.getDestroyClass(),
+					instance,
+					config,
+					omegaSetup,
+					intraLocalSearch
+				);
+
+				// Expand pertubOperators array
+				pertubOperators = Arrays.copyOf(pertubOperators, pertubOperators.length + 1);
+				pertubOperators[pertubOperators.length - 1] = plugin;
+
+				// Register with OmegaAdjustment
+				OmegaAdjustment pluginOmega = new OmegaAdjustment(
+					PerturbationType.Sequential, config, instance.getSize(), idealDist
+				);
+				omegaSetup.put(config.getDestroyClass(), pluginOmega);
+
+				System.out.println("[PLUGIN] Successfully loaded plugin operator");
+				System.out.println("[PLUGIN] Total operators: " + pertubOperators.length);
+				System.out.println("================================================================================");
+
+			} catch (Exception e) {
+				System.err.println("================================================================================");
+				System.err.println("[PLUGIN ERROR] Failed to load plugin:");
+				e.printStackTrace();
+				System.err.println("================================================================================");
+				System.err.println("Continuing with native operators only...");
+			}
+		}
+
+	}
+
+	private Perturbation loadPluginFromJar(String jarPath, String className,
+											Instance instance, Config config,
+											HashMap<String, OmegaAdjustment> omegaSetup,
+											IntraLocalSearch intraLocalSearch) throws Exception {
+		URL jarUrl = new File(jarPath).toURI().toURL();
+		URLClassLoader loader = new URLClassLoader(
+			new URL[]{jarUrl},
+			getClass().getClassLoader()
+		);
+
+		Class<?> clazz = loader.loadClass("Perturbation." + className);
+
+		Perturbation plugin = (Perturbation) clazz
+			.getConstructor(Instance.class, Config.class, HashMap.class, IntraLocalSearch.class)
+			.newInstance(instance, config, omegaSetup, intraLocalSearch);
+
+		// Initialize plugin's random with same seed
+		plugin.initRandom(config.getSeed());
+
+		return plugin;
 	}
 
 	public void search()

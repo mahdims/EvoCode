@@ -178,5 +178,29 @@ public class Config implements Cloneable
 		this.stoppingCriterionType = stoppingCriterionType;
 	}
 
+	// Plugin support getters/setters
+	public long getSeed() {
+		return seed;
+	}
+
+	public void setSeed(long seed) {
+		this.seed = seed;
+	}
+
+	public String getDestroyPlugin() {
+		return destroyPlugin;
+	}
+
+	public void setDestroyPlugin(String destroyPlugin) {
+		this.destroyPlugin = destroyPlugin;
+	}
+
+	public String getDestroyClass() {
+		return destroyClass;
+	}
+
+	public void setDestroyClass(String destroyClass) {
+		this.destroyClass = destroyClass;
+	}
 
 }

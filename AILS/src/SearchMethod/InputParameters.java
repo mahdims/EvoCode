@@ -33,7 +33,10 @@ public class InputParameters
 					case "-dMin": config.setDMin(getDMin(args[i+1]));break;
 					case "-gamma": config.setGamma(getGamma(args[i+1]));break;
 					case "-varphi": config.setVarphi(getVarphi(args[i+1]));break;
-					
+					case "-seed": config.setSeed(Long.parseLong(args[i+1]));break;
+					case "-destroyPlugin": config.setDestroyPlugin(args[i+1]);break;
+					case "-destroyClass": config.setDestroyClass(args[i+1]);break;
+
 				}
 			}
 		} 

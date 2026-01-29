@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(ls:*)",
-      "Bash(cmd.exe /c \"scripts\\\\build_jar.bat\")"
+      "Bash(cmd.exe /c \"scripts\\\\build_jar.bat\")",
+      "Bash(./build_jar.bat)",
+      "Bash(conda run:*)",
+      "Bash(findstr:*)",
+      "Bash(conda activate:*)",
+      "Bash(python:*)",
+      "Bash(tee:*)",
+      "Bash(java:*)",
+      "Bash(conda info:*)"
     ]
   }
 }

@@ -13,16 +13,16 @@ import Solution.Solution;
 
 public abstract class Perturbation 
 {
-	protected Route routes[];
-	protected int numRoutes;
-	protected Node solution[];
-	protected double f=0;
-	protected Random rand=new Random();
+	public Route routes[];
+	public int numRoutes;
+	public Node solution[];
+	public double f=0;
+	public Random rand=new Random();
 	public double omega;
 	OmegaAdjustment chosenOmega;
 	Config config;
-	protected Node candidates[];
-	protected int countCandidates;
+	public Node candidates[];
+	public int countCandidates;
 
 	InsertionHeuristic[]insertionHeuristics;
 	public InsertionHeuristic selectedInsertionHeuristic;
@@ -41,7 +41,7 @@ public abstract class Perturbation
 	double costPrev;
 	int indexA,indexB;
 	Node bestNode,aux;
-	Instance instance;
+	public Instance instance;
 	int limitAdj;
 	
 	IntraLocalSearch intraLocalSearch;
@@ -227,5 +227,13 @@ public abstract class Perturbation
 	public PerturbationType getPerturbationType() {
 		return perturbationType;
 	}
-	
+
+	/**
+	 * Initialize random number generator with a specific seed for reproducibility.
+	 * Used by plugin system to ensure consistent behavior across runs.
+	 */
+	public void initRandom(long seed) {
+		this.rand = new Random(seed);
+	}
+
 }

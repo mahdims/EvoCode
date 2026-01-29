@@ -1,0 +1,11 @@
+# Python dependencies for LLM-guided VRP destroy strategy evolution
+# Requires Python 3.12+ (recommended to use conda environment)
+
+# Google Gemini API (for LLM-guided code generation)
+google-genai>=0.2.0
+
+# Environment variables (for API key management)
+python-dotenv>=1.0.0
+
+# Note: Java JDK 11+ is also required for compiling generated strategies
+# Install via: apt install default-jdk (Linux) or download from Oracle/Adoptium
