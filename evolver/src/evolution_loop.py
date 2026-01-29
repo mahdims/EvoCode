@@ -504,6 +504,174 @@ class EvolutionLoop:
 
         return offspring
 
+    def _generate_offspring_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
+        """Generate multiple offspring codes (sequential due to LLM rate limits)."""
+        offspring_specs = []
+
+        for i in range(num_offspring):
+            use_crossover = random.random() < self.crossover_rate
+
+            if use_crossover and len(self.population) >= 2:
+                better_parent, worse_parent = self.select_parents()
+                print(f"[BATCH GEN {i+1}/{num_offspring}] Crossover: {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
+
+                short_term_reflection = self.llm.reflect_short_term(
+                    better_code=better_parent["code"],
+                    better_results=better_parent["eval_results"],
+                    worse_code=worse_parent["code"],
+                    worse_results=worse_parent["eval_results"]
+                )
+                self.short_term_reflections.append(short_term_reflection)
+
+                offspring_code = self.llm.crossover(
+                    parent1_code=better_parent["code"],
+                    parent2_code=worse_parent["code"],
+                    parent1_results=better_parent["eval_results"],
+                    parent2_results=worse_parent["eval_results"],
+                    short_term_reflection=short_term_reflection,
+                    use_vrpagent_bias=self.use_vrpagent,
+                    elite_bias=0.75
+                )
+
+                offspring_specs.append({
+                    "code": offspring_code,
+                    "parent_id": better_parent["candidate_id"],
+                    "mutation_type": "crossover"
+                })
+            else:
+                elite_parent = max(self.population, key=lambda x: x["fitness"])
+                print(f"[BATCH GEN {i+1}/{num_offspring}] Mutation from elite: {elite_parent['candidate_id']}")
+
+                mutation_type = None
+                if self.use_vrpagent:
+                    from vrpagent_prompts import VRPAgentPrompts
+                    mutation_type = VRPAgentPrompts.select_mutation_type(
+                        elite_code=elite_parent["code"],
+                        generation=self.generation,
+                        long_term_reflection=self.long_term_reflection
+                    )
+
+                offspring_code = self.llm.mutate(
+                    parent_code=elite_parent["code"],
+                    parent_results=elite_parent["eval_results"],
+                    long_term_reflection=self.long_term_reflection,
+                    mutation_strength=0.3,
+                    mutation_type=mutation_type,
+                    generation=self.generation
+                )
+
+                offspring_specs.append({
+                    "code": offspring_code,
+                    "parent_id": elite_parent["candidate_id"],
+                    "mutation_type": mutation_type or "mutation"
+                })
+
+        return offspring_specs
+
+    def _compile_batch_parallel(self, offspring_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Compile multiple offspring in parallel."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def compile_one(spec, candidate_id):
+            result = self.candidate_manager.compile_candidate(
+                strategy_code=spec["code"],
+                candidate_id=candidate_id,
+                parent_id=spec["parent_id"],
+                mutation_type=spec["mutation_type"]
+            )
+            if result:
+                return {
+                    **spec,
+                    "candidate_id": candidate_id,
+                    "jar_path": result["jar_path"],
+                    "class_name": result["wrapper_class"],
+                    "metadata": result
+                }
+            return None
+
+        candidate_ids = list(range(self.candidate_counter, self.candidate_counter + len(offspring_specs)))
+
+        with ThreadPoolExecutor(max_workers=min(len(offspring_specs), 4)) as executor:
+            futures = {
+                executor.submit(compile_one, spec, cid): i
+                for i, (spec, cid) in enumerate(zip(offspring_specs, candidate_ids))
+            }
+
+            results = [None] * len(offspring_specs)
+            for future in as_completed(futures):
+                idx = futures[future]
+                try:
+                    results[idx] = future.result()
+                except Exception as e:
+                    print(f"[COMPILE ERROR] Offspring {idx}: {e}")
+
+        compiled = [r for r in results if r is not None]
+        print(f"[BATCH COMPILE] {len(compiled)}/{len(offspring_specs)} compiled successfully")
+        return compiled
+
+    def _smoke_test_batch_parallel(self, compiled_candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Run smoke tests on multiple candidates in parallel."""
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        def smoke_test_one(candidate):
+            result = self.evaluator.smoke_test(candidate["jar_path"], candidate["class_name"])
+            return candidate if result["success"] else None
+
+        passed = []
+        with ThreadPoolExecutor(max_workers=min(len(compiled_candidates), 4)) as executor:
+            futures = {executor.submit(smoke_test_one, c): i for i, c in enumerate(compiled_candidates)}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if result:
+                        passed.append(result)
+                except Exception as e:
+                    print(f"[SMOKE TEST ERROR] {e}")
+
+        print(f"[BATCH SMOKE TEST] {len(passed)}/{len(compiled_candidates)} passed")
+        return passed
+
+    def _evaluate_batch_parallel(self, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Evaluate multiple candidates using 2-level parallelization."""
+        if not candidates:
+            return []
+
+        eval_candidates = [
+            {"jar_path": c["jar_path"], "class_name": c["class_name"], "candidate_id": c["candidate_id"]}
+            for c in candidates
+        ]
+
+        all_results = self.evaluator.evaluate_candidates_parallel(
+            eval_candidates,
+            self.target_instances,
+            max_candidate_workers=self.max_parallel_candidates,
+            max_instance_workers=self.max_parallel_evals or min(len(self.target_instances), 5)
+        )
+
+        offspring_list = []
+        for candidate, eval_results in zip(candidates, all_results):
+            base_fitness = self.evaluator.calculate_fitness(eval_results)
+            fitness = self._calculate_fitness_with_penalty(candidate["code"], base_fitness)
+
+            offspring = {
+                "candidate_id": candidate["candidate_id"],
+                "code": candidate["code"],
+                "metadata": candidate["metadata"],
+                "eval_results": eval_results,
+                "fitness": fitness,
+                "base_fitness": base_fitness,
+                "generation": self.generation,
+                "parent_id": candidate["parent_id"],
+                "mutation_type": candidate["mutation_type"]
+            }
+            offspring_list.append(offspring)
+            print(f"[BATCH EVAL] ID={candidate['candidate_id']}: fitness={fitness:.6f}")
+
+        if candidates:
+            self.candidate_counter = max(c["candidate_id"] for c in candidates) + 1
+
+        return offspring_list
+
     def update_long_term_reflection(self) -> None:
         """
         Update long-term reflection by synthesizing recent short-term reflections.
