@@ -340,11 +340,12 @@ class EvolutionLoop:
             print(f"[OFFSPRING] Smoke test failed")
             return None
 
-        # Evaluate
-        eval_results = self.evaluator.evaluate_endgame(
+        # Evaluate (parallel across instances)
+        eval_results = self.evaluator.evaluate_endgame_parallel(
             result["jar_path"],
             result["wrapper_class"],
-            self.target_instances
+            self.target_instances,
+            max_workers=self.max_parallel_evals
         )
 
         # Calculate fitness with optional code length penalty
