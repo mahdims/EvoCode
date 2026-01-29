@@ -721,9 +721,19 @@ class EvolutionLoop:
             num_generations: Number of generations to evolve
             reflection_frequency: How often to update long-term reflection
         """
+<<<<<<< HEAD
         self._log(f"\n{'='*80}", "info")
         self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
         self._log(f"{'='*80}\n", "info")
+=======
+        print(f"\n{'='*80}")
+        print(f"STARTING EVOLUTION: {num_generations} generations")
+        if self.use_batch_evaluation:
+            print(f"MODE: 2-level parallel (candidates={self.max_parallel_candidates}, instances={self.max_parallel_evals or 'auto'})")
+        else:
+            print(f"MODE: Sequential with instance parallelization")
+        print(f"{'='*80}\n")
+>>>>>>> 5322bdb (Update evolve() to use batch evaluation when enabled)
 
         for gen in range(num_generations):
             self.generation = gen + 1
@@ -733,13 +743,19 @@ class EvolutionLoop:
 
             # Generate offspring
             num_offspring = self.population_size - self.elite_size
-            offspring_count = 0
 
-            for i in range(num_offspring):
-                offspring = self.reproduce_with_reflection()
-                if offspring:
+            if self.use_batch_evaluation:
+                offspring_list = self._evolve_generation_batch(num_offspring)
+                for offspring in offspring_list:
                     self.population.append(offspring)
-                    offspring_count += 1
+                offspring_count = len(offspring_list)
+            else:
+                offspring_count = 0
+                for i in range(num_offspring):
+                    offspring = self.reproduce_with_reflection()
+                    if offspring:
+                        self.population.append(offspring)
+                        offspring_count += 1
 
             self._log(f"\n[GEN {self.generation}] Generated {offspring_count} valid offspring")
 
@@ -760,6 +776,26 @@ class EvolutionLoop:
 
         # Final statistics
         self.print_final_statistics()
+
+    def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
+        """Evolve one generation using 2-level parallel batch evaluation."""
+        print(f"\n[BATCH] Phase 1: Generating {num_offspring} offspring codes...")
+        offspring_specs = self._generate_offspring_batch(num_offspring)
+        if not offspring_specs:
+            return []
+
+        print(f"\n[BATCH] Phase 2: Compiling {len(offspring_specs)} candidates...")
+        compiled = self._compile_batch_parallel(offspring_specs)
+        if not compiled:
+            return []
+
+        print(f"\n[BATCH] Phase 3: Smoke testing {len(compiled)} candidates...")
+        passed_smoke = self._smoke_test_batch_parallel(compiled)
+        if not passed_smoke:
+            return []
+
+        print(f"\n[BATCH] Phase 4: 2-level parallel evaluation of {len(passed_smoke)} candidates...")
+        return self._evaluate_batch_parallel(passed_smoke)
 
     def _calculate_fitness_with_penalty(self, code: str, base_fitness: float) -> float:
         """
