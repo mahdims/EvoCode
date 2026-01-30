@@ -37,7 +37,8 @@ class EvolutionLoop:
                  debug: bool = True,
                  user_insight: str = "",
                  max_parallel_candidates: int = 3,
-                 use_batch_evaluation: bool = True):
+                 use_batch_evaluation: bool = True,
+                 max_llm_concurrent: int = 1):
         """
         Initialize evolution loop.
 
@@ -56,6 +57,7 @@ class EvolutionLoop:
             max_parallel_evals: Max parallel instance evaluations per candidate (default: min(num_instances, 5))
             max_parallel_candidates: Max parallel candidate evaluations (Level 1, default: 3)
             use_batch_evaluation: Enable 2-level parallel batch evaluation (default: True)
+            max_llm_concurrent: Max concurrent LLM generation calls (default: 1 = serial)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -69,6 +71,7 @@ class EvolutionLoop:
         self.user_insight = user_insight
         self.max_parallel_candidates = max_parallel_candidates
         self.use_batch_evaluation = use_batch_evaluation
+        self.max_llm_concurrent = max_llm_concurrent
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -713,6 +716,8 @@ class EvolutionLoop:
         """
         self._log(f"\n{'='*80}", "info")
         self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
+        if self.use_batch_evaluation:
+            self._log(f"MODE: Work-stealing pipeline (LLM concurrency={self.max_llm_concurrent})", "info")
         self._log(f"{'='*80}\n", "info")
 
         for gen in range(num_generations):
@@ -758,24 +763,248 @@ class EvolutionLoop:
         self.print_final_statistics()
 
     def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
-        """Evolve one generation using 2-level parallel batch evaluation."""
-        print(f"\n[BATCH] Phase 1: Generating {num_offspring} offspring codes...")
-        offspring_specs = self._generate_offspring_batch(num_offspring)
-        if not offspring_specs:
-            return []
+        """
+        Evolve one generation using work-stealing pipeline.
 
-        print(f"\n[BATCH] Phase 2: Compiling {len(offspring_specs)} candidates...")
-        compiled = self._compile_batch_parallel(offspring_specs)
-        if not compiled:
-            return []
+        Pipeline stages: Generate -> Compile -> Smoke Test -> Evaluate
+        Each stage pulls from previous queue as items become available.
+        """
+        from queue import Queue
+        from threading import Thread, Semaphore, Lock
+        from concurrent.futures import ThreadPoolExecutor
 
-        print(f"\n[BATCH] Phase 3: Smoke testing {len(compiled)} candidates...")
-        passed_smoke = self._smoke_test_batch_parallel(compiled)
-        if not passed_smoke:
-            return []
+        # Queues for pipeline stages
+        compile_queue = Queue()
+        smoke_queue = Queue()
+        eval_queue = Queue()
 
-        print(f"\n[BATCH] Phase 4: 2-level parallel evaluation of {len(passed_smoke)} candidates...")
-        return self._evaluate_batch_parallel(passed_smoke)
+        # Results collection
+        results = []
+        results_lock = Lock()
+
+        # Track candidate IDs
+        candidate_id_counter = [self.candidate_counter]
+        candidate_id_lock = Lock()
+
+        def get_next_candidate_id():
+            with candidate_id_lock:
+                cid = candidate_id_counter[0]
+                candidate_id_counter[0] += 1
+                return cid
+
+        # Sentinel for signaling workers to stop
+        DONE = object()
+
+        # Counters for logging
+        gen_done = [0]
+        compile_done = [0]
+        smoke_done = [0]
+        eval_done = [0]
+
+        # === LLM Generation (with concurrency limit) ===
+        llm_semaphore = Semaphore(self.max_llm_concurrent)
+
+        def generate_one(idx):
+            """Generate a single offspring and put in compile queue."""
+            with llm_semaphore:
+                use_crossover = random.random() < self.crossover_rate
+
+                if use_crossover and len(self.population) >= 2:
+                    better_parent, worse_parent = self.select_parents()
+                    print(f"[PIPELINE GEN {idx+1}/{num_offspring}] Crossover: {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
+
+                    short_term_reflection = self.llm.reflect_short_term(
+                        better_code=better_parent["code"],
+                        better_results=better_parent["eval_results"],
+                        worse_code=worse_parent["code"],
+                        worse_results=worse_parent["eval_results"]
+                    )
+                    self.short_term_reflections.append(short_term_reflection)
+
+                    offspring_code = self.llm.crossover(
+                        parent1_code=better_parent["code"],
+                        parent2_code=worse_parent["code"],
+                        parent1_results=better_parent["eval_results"],
+                        parent2_results=worse_parent["eval_results"],
+                        short_term_reflection=short_term_reflection,
+                        use_vrpagent_bias=self.use_vrpagent,
+                        elite_bias=0.75
+                    )
+
+                    spec = {
+                        "code": offspring_code,
+                        "parent_id": better_parent["candidate_id"],
+                        "mutation_type": "crossover"
+                    }
+                else:
+                    elite_parent = max(self.population, key=lambda x: x["fitness"])
+                    print(f"[PIPELINE GEN {idx+1}/{num_offspring}] Mutation from elite: {elite_parent['candidate_id']}")
+
+                    mutation_type = None
+                    if self.use_vrpagent:
+                        from vrpagent_prompts import VRPAgentPrompts
+                        mutation_type = VRPAgentPrompts.select_mutation_type(
+                            elite_code=elite_parent["code"],
+                            generation=self.generation,
+                            long_term_reflection=self.long_term_reflection
+                        )
+
+                    offspring_code = self.llm.mutate(
+                        parent_code=elite_parent["code"],
+                        parent_results=elite_parent["eval_results"],
+                        long_term_reflection=self.long_term_reflection,
+                        mutation_strength=0.3,
+                        mutation_type=mutation_type,
+                        generation=self.generation
+                    )
+
+                    spec = {
+                        "code": offspring_code,
+                        "parent_id": elite_parent["candidate_id"],
+                        "mutation_type": mutation_type or "mutation"
+                    }
+
+                gen_done[0] += 1
+                compile_queue.put(spec)
+
+        # === Compile Worker ===
+        def compile_worker():
+            """Pull from compile_queue, compile, push to smoke_queue."""
+            while True:
+                item = compile_queue.get()
+                if item is DONE:
+                    compile_queue.task_done()
+                    break
+
+                candidate_id = get_next_candidate_id()
+                result = self.candidate_manager.compile_candidate(
+                    strategy_code=item["code"],
+                    candidate_id=candidate_id,
+                    parent_id=item["parent_id"],
+                    mutation_type=item["mutation_type"]
+                )
+
+                if result:
+                    compiled = {
+                        **item,
+                        "candidate_id": candidate_id,
+                        "jar_path": result["jar_path"],
+                        "class_name": result["wrapper_class"],
+                        "metadata": result
+                    }
+                    compile_done[0] += 1
+                    print(f"[PIPELINE COMPILE] {compile_done[0]}/{num_offspring} done")
+                    smoke_queue.put(compiled)
+
+                compile_queue.task_done()
+
+        # === Smoke Test Worker ===
+        def smoke_worker():
+            """Pull from smoke_queue, test, push to eval_queue."""
+            while True:
+                item = smoke_queue.get()
+                if item is DONE:
+                    smoke_queue.task_done()
+                    break
+
+                result = self.evaluator.smoke_test(item["jar_path"], item["class_name"])
+                if result["success"]:
+                    smoke_done[0] += 1
+                    print(f"[PIPELINE SMOKE] {smoke_done[0]} passed")
+                    eval_queue.put(item)
+
+                smoke_queue.task_done()
+
+        # === Eval Worker ===
+        def eval_worker():
+            """Pull from eval_queue, evaluate, add to results."""
+            while True:
+                item = eval_queue.get()
+                if item is DONE:
+                    eval_queue.task_done()
+                    break
+
+                eval_results = self.evaluator.evaluate_endgame_parallel(
+                    item["jar_path"],
+                    item["class_name"],
+                    self.target_instances,
+                    max_workers=self.max_parallel_evals
+                )
+
+                base_fitness = self.evaluator.calculate_fitness(eval_results)
+                fitness = self._calculate_fitness_with_penalty(item["code"], base_fitness)
+
+                # Save evaluation results
+                self.candidate_manager.update_evaluation_results(
+                    candidate_id=item["candidate_id"],
+                    eval_results=eval_results,
+                    fitness=fitness,
+                    base_fitness=base_fitness,
+                    generation=self.generation
+                )
+
+                offspring = {
+                    "candidate_id": item["candidate_id"],
+                    "code": item["code"],
+                    "metadata": item["metadata"],
+                    "eval_results": eval_results,
+                    "fitness": fitness,
+                    "base_fitness": base_fitness,
+                    "generation": self.generation,
+                    "parent_id": item["parent_id"],
+                    "mutation_type": item["mutation_type"]
+                }
+
+                with results_lock:
+                    results.append(offspring)
+                    eval_done[0] += 1
+                    print(f"[PIPELINE EVAL] {eval_done[0]} complete, ID={item['candidate_id']}, fitness={fitness*100:.4f}%")
+
+                eval_queue.task_done()
+
+        # === Start Pipeline ===
+        print(f"\n[PIPELINE] Starting work-stealing pipeline (LLM concurrency={self.max_llm_concurrent})")
+
+        # Start worker threads
+        num_compile_workers = min(4, num_offspring)
+        num_smoke_workers = min(4, num_offspring)
+        num_eval_workers = self.max_parallel_candidates
+
+        compile_threads = [Thread(target=compile_worker, daemon=True) for _ in range(num_compile_workers)]
+        smoke_threads = [Thread(target=smoke_worker, daemon=True) for _ in range(num_smoke_workers)]
+        eval_threads = [Thread(target=eval_worker, daemon=True) for _ in range(num_eval_workers)]
+
+        for t in compile_threads + smoke_threads + eval_threads:
+            t.start()
+
+        # Generate offspring with thread pool (respects semaphore limit)
+        with ThreadPoolExecutor(max_workers=num_offspring) as gen_executor:
+            gen_executor.map(generate_one, range(num_offspring))
+
+        # Signal compile workers to stop after all generated
+        for _ in range(num_compile_workers):
+            compile_queue.put(DONE)
+        compile_queue.join()
+
+        # Signal smoke workers to stop
+        for _ in range(num_smoke_workers):
+            smoke_queue.put(DONE)
+        smoke_queue.join()
+
+        # Signal eval workers to stop
+        for _ in range(num_eval_workers):
+            eval_queue.put(DONE)
+        eval_queue.join()
+
+        # Wait for all workers to finish
+        for t in compile_threads + smoke_threads + eval_threads:
+            t.join(timeout=1)
+
+        # Update candidate counter
+        self.candidate_counter = candidate_id_counter[0]
+
+        print(f"[PIPELINE] Complete: {len(results)}/{num_offspring} offspring evaluated")
+        return results
 
     def _calculate_fitness_with_penalty(self, code: str, base_fitness: float) -> float:
         """
