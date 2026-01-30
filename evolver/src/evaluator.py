@@ -118,11 +118,15 @@ class Evaluator:
         instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
         print(f"[SMOKE TEST] Using instance: {instance_file.name}")
 
-        output_sol = self.temp_dir / "smoke_test.sol"
+        # Use unique output file per candidate to avoid conflicts in parallel execution
+        output_sol = self.temp_dir / f"smoke_test_{class_name}.sol"
 
         # Remove old output
         if output_sol.exists():
-            output_sol.unlink()
+            try:
+                output_sol.unlink()
+            except OSError:
+                pass  # Ignore if file is locked
 
         # Run AILS
         try:
