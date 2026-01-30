@@ -34,13 +34,10 @@ class EvolutionLoop:
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
                  max_parallel_evals: int = None,
-<<<<<<< HEAD
                  debug: bool = True,
-                 user_insight: str = ""):
-=======
+                 user_insight: str = "",
                  max_parallel_candidates: int = 3,
                  use_batch_evaluation: bool = True):
->>>>>>> 2ec1be3 (Add max_parallel_candidates and use_batch_evaluation params)
         """
         Initialize evolution loop.
 
@@ -54,15 +51,11 @@ class EvolutionLoop:
             seed: Random seed
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
-<<<<<<< HEAD
-            max_parallel_evals: Max parallel instance evaluations (default: min(num_instances, 5))
             debug: If True, show all output. If False, only show reflections and best candidate per generation
             user_insight: User-provided insight string for guiding evolution (reserved for future use)
-=======
             max_parallel_evals: Max parallel instance evaluations per candidate (default: min(num_instances, 5))
             max_parallel_candidates: Max parallel candidate evaluations (Level 1, default: 3)
             use_batch_evaluation: Enable 2-level parallel batch evaluation (default: True)
->>>>>>> 2ec1be3 (Add max_parallel_candidates and use_batch_evaluation params)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -72,13 +65,10 @@ class EvolutionLoop:
         self.code_length_penalty_alpha = code_length_penalty_alpha
         self.dataset_dir = dataset_dir
         self.max_parallel_evals = max_parallel_evals
-<<<<<<< HEAD
         self.debug = debug
         self.user_insight = user_insight
-=======
         self.max_parallel_candidates = max_parallel_candidates
         self.use_batch_evaluation = use_batch_evaluation
->>>>>>> 2ec1be3 (Add max_parallel_candidates and use_batch_evaluation params)
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -721,19 +711,9 @@ class EvolutionLoop:
             num_generations: Number of generations to evolve
             reflection_frequency: How often to update long-term reflection
         """
-<<<<<<< HEAD
         self._log(f"\n{'='*80}", "info")
         self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
         self._log(f"{'='*80}\n", "info")
-=======
-        print(f"\n{'='*80}")
-        print(f"STARTING EVOLUTION: {num_generations} generations")
-        if self.use_batch_evaluation:
-            print(f"MODE: 2-level parallel (candidates={self.max_parallel_candidates}, instances={self.max_parallel_evals or 'auto'})")
-        else:
-            print(f"MODE: Sequential with instance parallelization")
-        print(f"{'='*80}\n")
->>>>>>> 5322bdb (Update evolve() to use batch evaluation when enabled)
 
         for gen in range(num_generations):
             self.generation = gen + 1
