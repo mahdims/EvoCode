@@ -23,21 +23,23 @@ cd $SLURM_SUBMIT_DIR
 # Use array task ID as random seed
 SEED=$SLURM_ARRAY_TASK_ID
 
-# Run evolution with unique seed
+# Create temporary config with unique seed
+CONFIG_TEMPLATE=${1:-config.json}
+TEMP_CONFIG="slurm_logs/config_seed${SEED}.json"
+
+# Modify seed in config using Python
 python -c "
-from src.evolution_loop import EvolutionLoop
-
-evolution = EvolutionLoop(
-    population_size=4,
-    elite_ratio=0.25,
-    dataset_dir='Vrp_Set_X',
-    target_instances=['X-n101-k25', 'X-n106-k14'],
-    use_vrpagent=True,
-    seed=$SEED
-)
-
-evolution.initialize_population(num_seeds=2)
-evolution.evolve(num_generations=5, reflection_frequency=2)
+import json
+with open('$CONFIG_TEMPLATE') as f:
+    config = json.load(f)
+config['seed'] = $SEED
+config['experiment_name'] = config.get('experiment_name', 'run') + '_seed$SEED'
+with open('$TEMP_CONFIG', 'w') as f:
+    json.dump(config, f, indent=2)
+print(f'Created config with seed=$SEED: $TEMP_CONFIG')
 "
+
+# Run evolution with modified config
+python evo_agent.py "$TEMP_CONFIG"
 
 echo "Array task $SLURM_ARRAY_TASK_ID (seed $SEED) completed"

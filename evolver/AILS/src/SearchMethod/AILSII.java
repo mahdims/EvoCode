@@ -37,6 +37,7 @@ public class AILSII
 	//----------Warm Start------------
 	String instanceFilePath;
 	String warmStartPath;  // CLI-provided warm start path (empty = auto-detect)
+	boolean useWarmStart;  // Flag to control warm start behavior (default: false)
 
 	//----------Solution Output------------
 	String solOutputPath;  // CLI-provided solution output path (empty = auto: solutions/<instance>.sol)
@@ -84,6 +85,7 @@ public class AILSII
 		this.instanceFilePath=reader.getFile();
 		this.warmStartPath=reader.getWarmStart();
 		this.solOutputPath=reader.getSolOutput();
+		this.useWarmStart=reader.getConfig().isUseWarmStart();
 		Config config=reader.getConfig();
 		this.optimal=reader.getBest();
 		this.executionMaximumLimit=reader.getTimeLimit();
@@ -209,14 +211,21 @@ public class AILSII
 		lastSaveTime=first;  // Initialize last save time
 		referenceSolution.numRoutes=instance.getMinNumberRoutes();
 
-		// Try warm start solution first
-		boolean warmStartSuccess = tryWarmStart(referenceSolution);
+		// Try warm start solution if enabled
+		boolean warmStartSuccess = false;
+		if(useWarmStart)
+		{
+			warmStartSuccess = tryWarmStart(referenceSolution);
+		}
 
 		if(!warmStartSuccess)
 		{
-			System.out.println("================================================================================");
-			System.out.println("[WARM START] FALLBACK: No warm start solution found. Using construction heuristic.");
-			System.out.println("================================================================================");
+			if(useWarmStart)
+			{
+				System.out.println("================================================================================");
+				System.out.println("[WARM START] FALLBACK: No warm start solution found. Using construction heuristic.");
+				System.out.println("================================================================================");
+			}
 			constructSolution.construct(referenceSolution);
 		}
 

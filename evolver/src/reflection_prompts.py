@@ -7,6 +7,7 @@ Following the ReEvo framework:
 
 Adapted for VRP AILS Destroy Strategy Evolution
 """
+from __future__ import annotations
 
 
 class ReflectionPrompts:

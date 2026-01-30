@@ -23,7 +23,11 @@ public class InputParameters
 				switch(args[i])
 				{
 					case "-file": file=getAddress(args[i+1]);break;
-					case "-warmStart": warmStart=getWarmStartAddress(args[i+1]);break;
+					case "-warmStart":
+						warmStart=getWarmStartAddress(args[i+1]);
+						// Auto-enable useWarmStart when warmStart path is provided
+						if(!warmStart.isEmpty()) config.setUseWarmStart(true);
+						break;
 					case "-solOutput": solOutput=args[i+1];break;
 					case "-rounded": rounded=getRound(args[i+1]);break;
 					case "-limit": limit=getLimit(args[i+1]);break;
@@ -36,6 +40,7 @@ public class InputParameters
 					case "-seed": config.setSeed(Long.parseLong(args[i+1]));break;
 					case "-destroyPlugin": config.setDestroyPlugin(args[i+1]);break;
 					case "-destroyClass": config.setDestroyClass(args[i+1]);break;
+					case "-useWarmStart": config.setUseWarmStart(getUseWarmStart(args[i+1]));break;
 
 				}
 			}
@@ -186,15 +191,31 @@ public class InputParameters
 	public StoppingCriterionType getStoppingCriterion(String text)
 	{
 		StoppingCriterionType stoppingCriterion=StoppingCriterionType.Time;
-		try 
+		try
 		{
 			stoppingCriterion=StoppingCriterionType.valueOf(text);
-		} 
-		catch (java.lang.IllegalArgumentException e) 
+		}
+		catch (java.lang.IllegalArgumentException e)
 		{
 			System.err.println("The -stoppingCriterion parameter must have the values "+Arrays.toString(StoppingCriterionType.values())+".");
 		}
 		return stoppingCriterion;
+	}
+
+	public boolean getUseWarmStart(String text)
+	{
+		boolean useWarmStart=false;
+		try
+		{
+			if(text.equals("false")||text.equals("true"))
+				useWarmStart=Boolean.valueOf(text);
+			else
+				System.err.println("The -useWarmStart parameter must have the values false or true.");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return useWarmStart;
 	}
 
 	public String getFile() {

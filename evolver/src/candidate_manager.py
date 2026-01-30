@@ -333,6 +333,68 @@ public class {wrapper_class} extends Perturbation {{
                 return json.load(f)
         return None
 
+    def update_evaluation_results(self,
+                                   candidate_id: int,
+                                   eval_results: list,
+                                   fitness: float,
+                                   base_fitness: float,
+                                   generation: int = 0) -> bool:
+        """
+        Update candidate metadata with evaluation results.
+
+        Args:
+            candidate_id: Candidate ID
+            eval_results: List of evaluation results per instance
+            fitness: Final fitness (with penalty)
+            base_fitness: Base fitness (without penalty)
+            generation: Generation when evaluated
+
+        Returns:
+            True if update successful
+        """
+        candidate_dir = self.candidates_dir / f"gen_{candidate_id:04d}"
+        metadata_file = candidate_dir / "metadata.json"
+
+        if not metadata_file.exists():
+            return False
+
+        with open(metadata_file) as f:
+            metadata = json.load(f)
+
+        # Add evaluation data
+        metadata["evaluation"] = {
+            "generation": generation,
+            "fitness": fitness,
+            "fitness_pct": fitness * 100,  # For readability
+            "base_fitness": base_fitness,
+            "base_fitness_pct": base_fitness * 100,
+            "num_instances": len(eval_results),
+            "instances": []
+        }
+
+        for result in eval_results:
+            metadata["evaluation"]["instances"].append({
+                "name": result.get("instance", "unknown"),
+                "warmstart_cost": result.get("warmstart_cost", 0),
+                "final_cost": result.get("final_cost", 0),
+                "improvement": result.get("improvement", 0),
+                "improvement_pct": result.get("improvement", 0) * 100,
+                "runtime": result.get("runtime", 0),
+                "success": result.get("success", False)
+            })
+
+        # Save updated metadata
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=2)
+
+        # Update cache
+        code_hash = metadata.get("code_hash")
+        if code_hash and code_hash in self.cache:
+            self.cache[code_hash] = metadata
+            self._save_cache()
+
+        return True
+
     def list_candidates(self) -> list:
         """List all compiled candidates."""
         candidates = []

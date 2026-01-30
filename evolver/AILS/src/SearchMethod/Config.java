@@ -25,6 +25,9 @@ public class Config implements Cloneable
 	private long seed = System.currentTimeMillis();
 	private String destroyPlugin = null;
 	private String destroyClass = null;
+
+	// Warm start control
+	private boolean useWarmStart = false;
 	
 	public Config() 
 	{
@@ -201,6 +204,15 @@ public class Config implements Cloneable
 
 	public void setDestroyClass(String destroyClass) {
 		this.destroyClass = destroyClass;
+	}
+
+	// Warm start getters/setters
+	public boolean isUseWarmStart() {
+		return useWarmStart;
+	}
+
+	public void setUseWarmStart(boolean useWarmStart) {
+		this.useWarmStart = useWarmStart;
 	}
 
 }

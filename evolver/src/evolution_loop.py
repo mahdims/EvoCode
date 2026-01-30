@@ -10,6 +10,7 @@ Following ReEvo framework:
 - Long-term reflection: Accumulates knowledge, guides elitist mutation
 """
 
+import json
 import random
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
@@ -32,7 +33,9 @@ class EvolutionLoop:
                  seed: int = 42,
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
-                 max_parallel_evals: int = None):
+                 max_parallel_evals: int = None,
+                 debug: bool = True,
+                 user_insight: str = ""):
         """
         Initialize evolution loop.
 
@@ -47,6 +50,8 @@ class EvolutionLoop:
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
             max_parallel_evals: Max parallel instance evaluations (default: min(num_instances, 5))
+            debug: If True, show all output. If False, only show reflections and best candidate per generation
+            user_insight: User-provided insight string for guiding evolution (reserved for future use)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -56,16 +61,18 @@ class EvolutionLoop:
         self.code_length_penalty_alpha = code_length_penalty_alpha
         self.dataset_dir = dataset_dir
         self.max_parallel_evals = max_parallel_evals
+        self.debug = debug
+        self.user_insight = user_insight
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
-        candidates_dir = project_root / "candidates"
+        self.candidates_dir = project_root / "candidates"
         ails_jar = project_root / "AILS" / "AILSII.jar"
 
         self.candidate_manager = CandidateManager(
-            candidates_dir=str(candidates_dir),
+            candidates_dir=str(self.candidates_dir),
             ails_jar=str(ails_jar),
-            cache_file=str(candidates_dir / "cache.json")
+            cache_file=str(self.candidates_dir / "cache.json")
         )
         self.evaluator = Evaluator(
             ails_jar=str(ails_jar),
@@ -97,6 +104,100 @@ class EvolutionLoop:
 
         random.seed(seed)
 
+    def _log(self, message: str, level: str = "debug") -> None:
+        """
+        Log a message respecting debug flag.
+
+        Args:
+            message: Message to log
+            level: 'debug' (only if debug=True) or 'info' (always shown)
+        """
+        if level == "info" or self.debug:
+            print(message)
+
+    def _log_reflection(self, message: str) -> None:
+        """Log reflection-related messages (always shown)."""
+        print(message)
+
+    def resume_from_candidates(self) -> bool:
+        """
+        Resume evolution from existing candidates folder.
+
+        Loads population from saved metadata files, reconstructing the state
+        from the last run.
+
+        Returns:
+            True if successfully resumed, False if no valid candidates found
+        """
+        self._log("[RESUME] Scanning candidates folder for existing population...", "info")
+
+        candidates = []
+        max_gen = 0
+        max_id = -1
+
+        # Scan all candidate directories
+        for candidate_dir in sorted(self.candidates_dir.glob("gen_*")):
+            metadata_file = candidate_dir / "metadata.json"
+            if not metadata_file.exists():
+                continue
+
+            try:
+                with open(metadata_file) as f:
+                    metadata = json.load(f)
+
+                # Check if evaluation data exists
+                if "evaluation" not in metadata:
+                    self._log(f"[RESUME] Skipping {candidate_dir.name}: no evaluation data", "debug")
+                    continue
+
+                # Load the source code
+                strategy_class = metadata.get("strategy_class", "Unknown")
+                code_file = candidate_dir / "src" / "EvoDestroy" / f"{strategy_class}.java"
+                if not code_file.exists():
+                    self._log(f"[RESUME] Skipping {candidate_dir.name}: source file not found", "debug")
+                    continue
+
+                with open(code_file) as f:
+                    code = f.read()
+
+                # Reconstruct candidate entry
+                eval_data = metadata["evaluation"]
+                candidate = {
+                    "candidate_id": metadata["candidate_id"],
+                    "code": code,
+                    "metadata": metadata,
+                    "eval_results": eval_data.get("instances", []),
+                    "fitness": eval_data.get("fitness", 0),
+                    "base_fitness": eval_data.get("base_fitness", 0),
+                    "generation": eval_data.get("generation", 0),
+                    "parent_id": metadata.get("parent_id"),
+                    "mutation_type": metadata.get("mutation_type", "unknown")
+                }
+
+                candidates.append(candidate)
+                max_gen = max(max_gen, candidate["generation"])
+                max_id = max(max_id, candidate["candidate_id"])
+
+            except Exception as e:
+                self._log(f"[RESUME] Error loading {candidate_dir.name}: {e}", "debug")
+                continue
+
+        if not candidates:
+            self._log("[RESUME] No valid candidates found to resume from", "info")
+            return False
+
+        # Sort by fitness and keep top population_size
+        candidates.sort(key=lambda x: x["fitness"], reverse=True)
+        self.population = candidates[:self.population_size]
+        self.generation = max_gen
+        self.candidate_counter = max_id + 1
+
+        self._log(f"[RESUME] Loaded {len(self.population)} candidates from {len(candidates)} total", "info")
+        self._log(f"[RESUME] Resuming from generation {self.generation}, next candidate ID: {self.candidate_counter}", "info")
+        self._log(f"[RESUME] Best fitness: {self.population[0]['fitness']*100:.4f}%", "info")
+
+        return True
+
     def initialize_population(self, num_seeds: int = 3) -> None:
         """
         Initialize population with seed strategies.
@@ -104,7 +205,7 @@ class EvolutionLoop:
         Args:
             num_seeds: Number of seed strategies to generate
         """
-        print(f"[INIT] Generating {num_seeds} seed strategies...")
+        self._log(f"[INIT] Generating {num_seeds} seed strategies...")
 
         for i in range(num_seeds):
             strategy_code = self.llm.generate_initial_seed(i)
@@ -117,7 +218,7 @@ class EvolutionLoop:
             )
 
             if not result:
-                print(f"[INIT] Seed {i} failed to compile, skipping")
+                self._log(f"[INIT] Seed {i} failed to compile, skipping")
                 continue
 
             # Smoke test
@@ -127,7 +228,7 @@ class EvolutionLoop:
             )
 
             if not smoke["success"]:
-                print(f"[INIT] Seed {i} failed smoke test, skipping")
+                self._log(f"[INIT] Seed {i} failed smoke test, skipping")
                 continue
 
             # Evaluate (parallel across instances)
@@ -142,6 +243,15 @@ class EvolutionLoop:
             base_fitness = self.evaluator.calculate_fitness(eval_results)
             fitness = self._calculate_fitness_with_penalty(strategy_code, base_fitness)
 
+            # Save evaluation results to metadata
+            self.candidate_manager.update_evaluation_results(
+                candidate_id=self.candidate_counter,
+                eval_results=eval_results,
+                fitness=fitness,
+                base_fitness=base_fitness,
+                generation=0
+            )
+
             self.population.append({
                 "candidate_id": self.candidate_counter,
                 "code": strategy_code,
@@ -152,10 +262,10 @@ class EvolutionLoop:
                 "generation": 0
             })
 
-            print(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness:.6f}")
+            self._log(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
             self.candidate_counter += 1
 
-        print(f"[INIT] Population size: {len(self.population)}")
+        self._log(f"[INIT] Population size: {len(self.population)}")
 
     def select_parents(self, tournament_size: int = 3) -> Tuple[Dict, Dict]:
         """
@@ -238,11 +348,11 @@ class EvolutionLoop:
         # Select parents
         better_parent, worse_parent = self.select_parents()
 
-        print(f"[CROSSOVER] Parents: {better_parent['candidate_id']} (fit={better_parent['fitness']:.6f}) "
-              f"x {worse_parent['candidate_id']} (fit={worse_parent['fitness']:.6f})")
+        self._log(f"[CROSSOVER] Parents: {better_parent['candidate_id']} (fit={better_parent['fitness']*100:.4f}%) "
+              f"x {worse_parent['candidate_id']} (fit={worse_parent['fitness']*100:.4f}%)")
 
         # Generate short-term reflection
-        print(f"[REFLECTION] Generating short-term reflection...")
+        self._log(f"[REFLECTION] Generating short-term reflection...")
         short_term_reflection = self.llm.reflect_short_term(
             better_code=better_parent["code"],
             better_results=better_parent["eval_results"],
@@ -252,7 +362,7 @@ class EvolutionLoop:
 
         # Store for long-term accumulation
         self.short_term_reflections.append(short_term_reflection)
-        print(f"[REFLECTION] Short-term insight: {short_term_reflection[:150]}...")
+        self._log_reflection(f"[REFLECTION] Short-term insight: {short_term_reflection[:200]}...")
 
         # Generate offspring using reflection + optional VRPAGENT bias
         offspring_code = self.llm.crossover(
@@ -283,7 +393,7 @@ class EvolutionLoop:
         # Select elite parent
         elite_parent = max(self.population, key=lambda x: x["fitness"])
 
-        print(f"[MUTATION] Elite parent: {elite_parent['candidate_id']} (fit={elite_parent['fitness']:.6f})")
+        self._log(f"[MUTATION] Elite parent: {elite_parent['candidate_id']} (fit={elite_parent['fitness']*100:.4f}%)")
 
         # Select mutation type (VRPAGENT)
         if self.use_vrpagent:
@@ -293,7 +403,7 @@ class EvolutionLoop:
                 generation=self.generation,
                 long_term_reflection=self.long_term_reflection
             )
-            print(f"[MUTATION] Selected type: {mutation_type}")
+            self._log(f"[MUTATION] Selected type: {mutation_type}")
         else:
             mutation_type = None
 
@@ -327,7 +437,7 @@ class EvolutionLoop:
         )
 
         if not result:
-            print(f"[OFFSPRING] Compilation failed")
+            self._log(f"[OFFSPRING] Compilation failed")
             return None
 
         # Smoke test
@@ -337,7 +447,7 @@ class EvolutionLoop:
         )
 
         if not smoke["success"]:
-            print(f"[OFFSPRING] Smoke test failed")
+            self._log(f"[OFFSPRING] Smoke test failed")
             return None
 
         # Evaluate (parallel across instances)
@@ -352,6 +462,15 @@ class EvolutionLoop:
         base_fitness = self.evaluator.calculate_fitness(eval_results)
         fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
 
+        # Save evaluation results to metadata
+        self.candidate_manager.update_evaluation_results(
+            candidate_id=self.candidate_counter,
+            eval_results=eval_results,
+            fitness=fitness,
+            base_fitness=base_fitness,
+            generation=self.generation
+        )
+
         offspring = {
             "candidate_id": self.candidate_counter,
             "code": offspring_code,
@@ -364,7 +483,7 @@ class EvolutionLoop:
             "mutation_type": mutation_type
         }
 
-        print(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness:.6f}")
+        self._log(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness*100:.4f}%")
         self.candidate_counter += 1
 
         return offspring
@@ -376,11 +495,11 @@ class EvolutionLoop:
         Following ReEvo: Distill accumulated experiences into concise knowledge base.
         """
         if not self.short_term_reflections:
-            print(f"[REFLECTION] No short-term reflections to synthesize yet")
+            self._log(f"[REFLECTION] No short-term reflections to synthesize yet")
             return
 
-        print(f"[REFLECTION] Updating long-term knowledge (gen={self.generation})...")
-        print(f"[REFLECTION] Synthesizing {len(self.short_term_reflections)} recent insights...")
+        self._log(f"[REFLECTION] Updating long-term knowledge (gen={self.generation})...")
+        self._log(f"[REFLECTION] Synthesizing {len(self.short_term_reflections)} recent insights...")
 
         self.long_term_reflection = self.llm.reflect_long_term(
             recent_short_term_reflections=self.short_term_reflections,
@@ -388,8 +507,8 @@ class EvolutionLoop:
             generation=self.generation
         )
 
-        print(f"[REFLECTION] Long-term knowledge updated:")
-        print(self.long_term_reflection[:300] + "...")
+        self._log_reflection(f"[REFLECTION] Long-term knowledge updated:")
+        self._log_reflection(self.long_term_reflection[:400] + "...")
 
         # Clear short-term buffer (already distilled into long-term)
         self.short_term_reflections = []
@@ -406,9 +525,9 @@ class EvolutionLoop:
         # Keep top population_size
         self.population = self.population[:self.population_size]
 
-        print(f"[SELECTION] Population after selection: {len(self.population)} candidates")
-        print(f"[SELECTION] Top fitness: {self.population[0]['fitness']:.6f}")
-        print(f"[SELECTION] Worst fitness: {self.population[-1]['fitness']:.6f}")
+        self._log(f"[SELECTION] Population after selection: {len(self.population)} candidates")
+        self._log(f"[SELECTION] Top fitness: {self.population[0]['fitness']*100:.4f}%")
+        self._log(f"[SELECTION] Worst fitness: {self.population[-1]['fitness']*100:.4f}%")
 
     def evolve(self, num_generations: int = 10, reflection_frequency: int = 3) -> None:
         """
@@ -418,15 +537,15 @@ class EvolutionLoop:
             num_generations: Number of generations to evolve
             reflection_frequency: How often to update long-term reflection
         """
-        print(f"\n{'='*80}")
-        print(f"STARTING EVOLUTION: {num_generations} generations")
-        print(f"{'='*80}\n")
+        self._log(f"\n{'='*80}", "info")
+        self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
+        self._log(f"{'='*80}\n", "info")
 
         for gen in range(num_generations):
             self.generation = gen + 1
-            print(f"\n{'='*80}")
-            print(f"GENERATION {self.generation}")
-            print(f"{'='*80}")
+            self._log(f"\n{'='*80}")
+            self._log(f"GENERATION {self.generation}")
+            self._log(f"{'='*80}")
 
             # Generate offspring
             num_offspring = self.population_size - self.elite_size
@@ -438,7 +557,7 @@ class EvolutionLoop:
                     self.population.append(offspring)
                     offspring_count += 1
 
-            print(f"\n[GEN {self.generation}] Generated {offspring_count} valid offspring")
+            self._log(f"\n[GEN {self.generation}] Generated {offspring_count} valid offspring")
 
             # Survival selection
             self.survival_selection()
@@ -447,13 +566,13 @@ class EvolutionLoop:
             if self.generation % reflection_frequency == 0:
                 self.update_long_term_reflection()
 
-            # Report best
+            # Report best (always shown)
             best = max(self.population, key=lambda x: x["fitness"])
-            print(f"\n[GEN {self.generation}] BEST: ID={best['candidate_id']}, fitness={best['fitness']:.6f}")
+            self._log(f"\n[GEN {self.generation}] BEST: ID={best['candidate_id']}, fitness={best['fitness']*100:.4f}%", "info")
 
-        print(f"\n{'='*80}")
-        print(f"EVOLUTION COMPLETE")
-        print(f"{'='*80}\n")
+        self._log(f"\n{'='*80}", "info")
+        self._log(f"EVOLUTION COMPLETE", "info")
+        self._log(f"{'='*80}\n", "info")
 
         # Final statistics
         self.print_final_statistics()
@@ -484,22 +603,24 @@ class EvolutionLoop:
         return penalized_fitness
 
     def print_final_statistics(self) -> None:
-        """Print final evolution statistics."""
+        """Print final evolution statistics (always shown)."""
         best = max(self.population, key=lambda x: x["fitness"])
 
-        print(f"\n{'='*80}")
-        print(f"FINAL STATISTICS")
-        print(f"{'='*80}")
-        print(f"Total candidates evaluated: {self.candidate_counter}")
-        print(f"Final population size: {len(self.population)}")
-        print(f"Best candidate ID: {best['candidate_id']}")
-        print(f"Best fitness: {best['fitness']:.6f}")
+        self._log(f"\n{'='*80}", "info")
+        self._log(f"FINAL STATISTICS", "info")
+        self._log(f"{'='*80}", "info")
+        self._log(f"Total candidates evaluated: {self.candidate_counter}", "info")
+        self._log(f"Final population size: {len(self.population)}", "info")
+        self._log(f"Best candidate ID: {best['candidate_id']}", "info")
+        self._log(f"Best fitness: {best['fitness']*100:.4f}%", "info")
         if self.use_vrpagent and "base_fitness" in best:
-            print(f"Best base fitness (no penalty): {best['base_fitness']:.6f}")
-        print(f"Best generation: {best['generation']}")
-        print(f"\nBest candidate performance:")
+            self._log(f"Best base fitness (no penalty): {best['base_fitness']*100:.4f}%", "info")
+        self._log(f"Best generation: {best['generation']}", "info")
+        self._log(f"\nBest candidate performance:", "info")
         for result in best["eval_results"]:
-            print(f"  {result['instance']}: {result['improvement']*100:.3f}% improvement")
+            instance_name = result.get('instance', result.get('name', 'unknown'))
+            improvement = result.get('improvement', result.get('improvement_pct', 0) / 100)
+            self._log(f"  {instance_name}: {improvement*100:.3f}% improvement", "info")
 
         # Code length statistics
         if self.use_vrpagent:
@@ -507,9 +628,9 @@ class EvolutionLoop:
                             if l.strip() and not l.strip().startswith('//')
                             and not l.strip().startswith('package')
                             and not l.strip().startswith('import')])
-            print(f"\nBest candidate code length: {code_lines} lines")
+            self._log(f"\nBest candidate code length: {code_lines} lines", "info")
 
-        print(f"\n{'='*80}\n")
+        self._log(f"\n{'='*80}\n", "info")
 
 
 # Example usage

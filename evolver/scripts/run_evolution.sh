@@ -19,18 +19,7 @@ source $HOME/envs/evolver/bin/activate
 # Navigate to project
 cd $SLURM_SUBMIT_DIR
 
-# Run evolution
-python -c "
-from src.evolution_loop import EvolutionLoop
-
-evolution = EvolutionLoop(
-    population_size=4,
-    elite_ratio=0.25,
-    dataset_dir='Vrp_Set_X',
-    target_instances=['X-n101-k25', 'X-n106-k14'],
-    use_vrpagent=True
-)
-
-evolution.initialize_population(num_seeds=2)
-evolution.evolve(num_generations=5, reflection_frequency=2)
-"
+# Run evolution with config file
+# Default: config.json, or specify: configs/full_small.json
+CONFIG=${1:-config.json}
+python evo_agent.py "$CONFIG"

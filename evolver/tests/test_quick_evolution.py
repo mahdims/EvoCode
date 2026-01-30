@@ -38,7 +38,7 @@ evolution = EvolutionLoop(
         "X-n125-k30"                     # 125 nodes, 30 vehicles
     ],
     use_vrpagent=True,
-    code_length_penalty_alpha=0.001,
+    code_length_penalty_alpha=0.00,
     max_parallel_evals=4                 # Parallel evaluation on 4 cores
 )
 
