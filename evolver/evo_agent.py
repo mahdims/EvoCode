@@ -18,6 +18,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+import utils
 from evolution_loop import EvolutionLoop
 
 
@@ -37,14 +38,14 @@ def load_config(config_path: str = None) -> dict:
         config_path = Path(config_path)
 
     if not config_path.exists():
-        print(f"[CONFIG] Config file not found: {config_path}")
-        print(f"[CONFIG] Using default configuration")
+        utils.log(f"[CONFIG] Config file not found: {config_path}")
+        utils.log(f"[CONFIG] Using default configuration")
         return get_default_config()
 
     with open(config_path) as f:
         config = json.load(f)
 
-    print(f"[CONFIG] Loaded configuration from: {config_path}")
+    utils.log(f"[CONFIG] Loaded configuration from: {config_path}")
     return config
 
 
@@ -76,15 +77,15 @@ def get_default_config() -> dict:
 
         # New settings
         "resume": False,
-        "debug": True,
+        "verbose": True,
         "user_insight": ""
     }
 
 
-def print_config(config: dict, debug: bool = True):
+def print_config(config: dict, verbose: bool = True):
     """Print configuration summary."""
-    if not debug:
-        # Minimal output when debug is off
+    if not verbose:
+        # Minimal output when verbose is off
         print(f"\n[CONFIG] {config.get('experiment_name', 'unnamed')} | "
               f"{config['num_generations']} gens | "
               f"resume={config.get('resume', False)}")
@@ -102,7 +103,7 @@ def print_config(config: dict, debug: bool = True):
     print(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config['code_length_penalty_alpha']})")
     print(f"  Random seed: {config['seed']}")
     print(f"  Resume: {config.get('resume', False)}")
-    print(f"  Debug output: {config.get('debug', True)}")
+    print(f"  Debug output: {config.get('verbose', True)}")
     if config.get('user_insight'):
         print(f"  User insight: {config['user_insight'][:50]}...")
     print("="*80 + "\n")
@@ -111,7 +112,7 @@ def print_config(config: dict, debug: bool = True):
 def clean_candidates_folder(candidates_dir: Path):
     """Remove existing candidates folder for fresh start."""
     if candidates_dir.exists():
-        print(f"[CLEAN] Removing existing candidates folder: {candidates_dir}")
+        utils.log(f"[CLEAN] Removing existing candidates folder: {candidates_dir}")
         shutil.rmtree(candidates_dir)
     candidates_dir.mkdir(exist_ok=True)
 
@@ -124,10 +125,10 @@ def run_evolution(config: dict):
         config: Configuration dictionary
     """
     resume = config.get("resume", False)
-    debug = config.get("debug", True)
+    verbose = config.get("verbose", True)
     user_insight = config.get("user_insight", "")
 
-    print_config(config, debug)
+    print_config(config, verbose)
 
     # Determine candidates directory
     project_root = Path(__file__).parent
@@ -149,25 +150,25 @@ def run_evolution(config: dict):
         code_length_penalty_alpha=config["code_length_penalty_alpha"],
         seed=config["seed"],
         max_parallel_evals=config.get("max_parallel_evals"),
-        debug=debug,
+        verbose=verbose,
         user_insight=user_insight
     )
 
     # Initialize or resume population
     if resume:
-        print(f"[PHASE 1] Attempting to resume from existing candidates...")
+        utils.log(f"[PHASE 1] Attempting to resume from existing candidates...")
         resumed = evolution.resume_from_candidates()
         if not resumed:
-            print(f"[PHASE 1] Resume failed, initializing fresh population with {config['num_seeds']} seeds...")
+            utils.log(f"[PHASE 1] Resume failed, initializing fresh population with {config['num_seeds']} seeds...")
             evolution.initialize_population(num_seeds=config["num_seeds"])
     else:
-        if debug:
-            print(f"[PHASE 1] Initializing population with {config['num_seeds']} seeds...")
+        if verbose:
+            utils.log(f"[PHASE 1] Initializing population with {config['num_seeds']} seeds...")
         evolution.initialize_population(num_seeds=config["num_seeds"])
 
     # Run evolution
-    if debug:
-        print(f"\n[PHASE 2] Running {config['num_generations']} generations...")
+    if verbose:
+        utils.log(f"\n[PHASE 2] Running {config['num_generations']} generations...")
     evolution.evolve(
         num_generations=config["num_generations"],
         reflection_frequency=config["reflection_frequency"]
@@ -186,7 +187,7 @@ Examples:
     python evo_agent.py myconfig.json        # Use custom config
     python evo_agent.py -c experiments/exp1.json
     python evo_agent.py --resume             # Resume from existing candidates
-    python evo_agent.py --no-debug           # Minimal output (reflections + best only)
+    python evo_agent.py --no-verbose           # Minimal output (reflections + best only)
         """
     )
     parser.add_argument(
@@ -207,7 +208,7 @@ Examples:
         help="Resume from existing candidates (overrides config)"
     )
     parser.add_argument(
-        "--no-debug",
+        "--no-verbose",
         action="store_true",
         help="Minimal output: only reflections and best candidate per generation"
     )
@@ -223,8 +224,8 @@ Examples:
     # Command line overrides
     if args.resume:
         config["resume"] = True
-    if args.no_debug:
-        config["debug"] = False
+    if args.no_verbose:
+        config["verbose"] = False
 
     try:
         evolution = run_evolution(config)

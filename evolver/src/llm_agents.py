@@ -14,6 +14,8 @@ API key should be in .env file as GEMINI_API_KEY
 import os
 from typing import Optional, Dict, List, Any
 
+import utils
+
 # Load environment variables if dotenv is available
 try:
     from dotenv import load_dotenv
@@ -33,8 +35,8 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    print("[WARNING] google-genai not installed. Using template-based generation only.")
-    print("Install with: pip install google-genai")
+    utils.log("[WARNING] google-genai not installed. Using template-based generation only.")
+    utils.log("Install with: pip install google-genai")
 
 
 class LLMAgents:
@@ -55,16 +57,16 @@ class LLMAgents:
         if self.use_llm:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
-                print("[WARNING] GEMINI_API_KEY not found in environment.")
-                print("Set it with: export GEMINI_API_KEY=your-key-here")
-                print("Falling back to template-based generation.")
+                utils.log("[WARNING] GEMINI_API_KEY not found in environment.")
+                utils.log("Set it with: export GEMINI_API_KEY=your-key-here")
+                utils.log("Falling back to template-based generation.")
                 self.use_llm = False
             else:
                 os.environ["GOOGLE_API_KEY"] = api_key  # New SDK uses GOOGLE_API_KEY
                 self.client = genai.Client()
-                print(f"[LLM] Using Gemini model: {self.model_name}")
+                utils.log(f"[LLM] Using Gemini model: {self.model_name}", level="debug")
         else:
-            print("[LLM] Using template-based generation (no API calls)")
+            utils.log("[LLM] Using template-based generation (no API calls)", level="debug")
 
         # Constraints that ALL generated code must follow
         self.CONSTRAINTS = """
@@ -204,7 +206,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 long_term_reflection=long_term_reflection,
                 mutation_strength=mutation_strength
             )
-            print(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
+            utils.log(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection", level="debug")
         elif long_term_reflection and parent_results:
             # ReEvo reflection-guided mutation
             prompt = ReflectionPrompts.mutation_with_long_term_reflection(
@@ -213,13 +215,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 long_term_knowledge=long_term_reflection,
                 mutation_strength=mutation_strength
             )
-            print(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
+            utils.log(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation", level="debug")
         else:
             # Basic mutation prompt
             prompt = self._build_mutation_prompt(parent_code, long_term_reflection or "", mutation_strength)
-            print(f"[LLM MUTATION] Using basic mutation (limited reflection)")
+            utils.log(f"[LLM MUTATION] Using basic mutation (limited reflection)", level="debug")
 
-        print(f"[LLM MUTATION] Prompt length: {len(prompt)} chars")
+        utils.log(f"[LLM MUTATION] Prompt length: {len(prompt)} chars", level="debug")
 
         if self.use_llm:
             try:
@@ -228,11 +230,11 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                     contents=prompt
                 )
                 code = self._extract_java_code(response.text)
-                print(f"[LLM MUTATION] Generated {len(code)} chars of code")
+                utils.log(f"[LLM MUTATION] Generated {len(code)} chars of code", level="debug")
                 return code
             except Exception as e:
-                print(f"[LLM ERROR] Mutation failed: {e}")
-                print("[LLM] Falling back to template mutation")
+                utils.log(f"[LLM ERROR] Mutation failed: {e}")
+                utils.log("[LLM] Falling back to template mutation")
                 return self._add_mutation_comment(parent_code, "MUTATED")
         else:
             # Placeholder: return parent code with comment
@@ -276,7 +278,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 short_term_reflection=short_term_reflection,
                 elite_bias=elite_bias
             )
-            print(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
+            utils.log(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection", level="debug")
         elif short_term_reflection:
             # ReEvo reflection-guided crossover
             prompt = ReflectionPrompts.crossover_with_short_term_reflection(
@@ -284,13 +286,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 worse_code=parent2_code,
                 short_term_insight=short_term_reflection
             )
-            print(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
+            utils.log(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover", level="debug")
         else:
             # Basic crossover prompt
             prompt = self._build_crossover_prompt(parent1_code, parent2_code)
-            print(f"[LLM CROSSOVER] Using basic crossover (no reflection)")
+            utils.log(f"[LLM CROSSOVER] Using basic crossover (no reflection)", level="debug")
 
-        print(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars")
+        utils.log(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars", level="debug")
 
         if self.use_llm:
             try:
@@ -299,11 +301,11 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                     contents=prompt
                 )
                 code = self._extract_java_code(response.text)
-                print(f"[LLM CROSSOVER] Generated {len(code)} chars of code")
+                utils.log(f"[LLM CROSSOVER] Generated {len(code)} chars of code", level="debug")
                 return code
             except Exception as e:
-                print(f"[LLM ERROR] Crossover failed: {e}")
-                print("[LLM] Falling back to template crossover")
+                utils.log(f"[LLM ERROR] Crossover failed: {e}")
+                utils.log("[LLM] Falling back to template crossover")
                 return self._add_mutation_comment(parent1_code, "CROSSOVER")
         else:
             # Placeholder: return parent1 with comment
@@ -345,7 +347,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Short-term reflection failed: {e}")
+                utils.log(f"[LLM ERROR] Short-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -413,7 +415,7 @@ Consider combining the superior selection criteria with complementary diversific
         truncated_bullets = sum(1 for line in result_lines if line.strip().startswith('-') or line.strip().startswith('*'))
 
         if truncated_bullets < original_bullets:
-            print(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
+            utils.log(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
 
         return truncated
 
@@ -452,7 +454,7 @@ Consider combining the superior selection criteria with complementary diversific
                 )
                 reflection = response.text
             except Exception as e:
-                print(f"[LLM ERROR] Long-term reflection failed: {e}")
+                utils.log(f"[LLM ERROR] Long-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -528,7 +530,7 @@ Keep it concise and actionable.
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Reflection failed: {e}")
+                utils.log(f"[LLM ERROR] Reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback

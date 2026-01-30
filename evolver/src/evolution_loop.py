@@ -15,6 +15,7 @@ import random
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
+import utils
 from candidate_manager import CandidateManager
 from evaluator import Evaluator
 from llm_agents import LLMAgents
@@ -34,7 +35,7 @@ class EvolutionLoop:
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
                  max_parallel_evals: int = None,
-                 debug: bool = True,
+                 verbose: bool = True,
                  user_insight: str = ""):
         """
         Initialize evolution loop.
@@ -50,7 +51,7 @@ class EvolutionLoop:
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
             max_parallel_evals: Max parallel instance evaluations (default: min(num_instances, 5))
-            debug: If True, show all output. If False, only show reflections and best candidate per generation
+            verbose: If True, show all output. If False, only show reflections and best candidate per generation
             user_insight: User-provided insight string for guiding evolution (reserved for future use)
         """
         self.population_size = population_size
@@ -61,8 +62,11 @@ class EvolutionLoop:
         self.code_length_penalty_alpha = code_length_penalty_alpha
         self.dataset_dir = dataset_dir
         self.max_parallel_evals = max_parallel_evals
-        self.debug = debug
+        self.verbose = verbose
         self.user_insight = user_insight
+
+        # Set global verbose flag for all modules
+        utils.set_verbose(verbose)
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -106,13 +110,13 @@ class EvolutionLoop:
 
     def _log(self, message: str, level: str = "debug") -> None:
         """
-        Log a message respecting debug flag.
+        Log a message respecting verbose flag.
 
         Args:
             message: Message to log
-            level: 'debug' (only if debug=True) or 'info' (always shown)
+            level: 'debug' (only if verbose=True) or 'info' (always shown)
         """
-        if level == "info" or self.debug:
+        if level == "info" or self.verbose:
             print(message)
 
     def _log_reflection(self, message: str) -> None:

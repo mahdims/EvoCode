@@ -9,6 +9,7 @@ Handles:
 - Fitness calculation
 """
 
+import utils
 import os
 import re
 import subprocess
@@ -63,7 +64,7 @@ class Evaluator:
                     if line.startswith("Cost"):
                         return float(line.split()[1])
         except Exception as e:
-            print(f"[PARSE ERROR] Failed to parse {sol_file}: {e}")
+            utils.log(f"[PARSE ERROR] Failed to parse {sol_file}: {e}")
 
         return float('inf')
 
@@ -106,7 +107,7 @@ class Evaluator:
         # Look for instances and pick the smallest one by file size (proxy for instance size)
         vrp_files = list(self.data_dir.glob("*.vrp"))
         if not vrp_files:
-            print(f"[SMOKE TEST ERROR] No .vrp files found in {self.data_dir}")
+            utils.log(f"[SMOKE TEST ERROR] No .vrp files found in {self.data_dir}")
             return {
                 "success": False,
                 "runtime": 0.0,
@@ -116,7 +117,7 @@ class Evaluator:
 
         # Pick smallest instance by file size (smaller files = fewer nodes)
         instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
-        print(f"[SMOKE TEST] Using instance: {instance_file.name}")
+        utils.log(f"[SMOKE TEST] Using instance: {instance_file.name}", level="debug")
 
         output_sol = self.temp_dir / "smoke_test.sol"
 
@@ -150,7 +151,7 @@ class Evaluator:
             }
 
         except subprocess.TimeoutExpired:
-            print(f"[SMOKE TEST TIMEOUT] {class_name} exceeded {timeout}s")
+            utils.log(f"[SMOKE TEST TIMEOUT] {class_name} exceeded {timeout}s")
             return {
                 "success": False,
                 "runtime": timeout,
@@ -159,7 +160,7 @@ class Evaluator:
             }
 
         except Exception as e:
-            print(f"[SMOKE TEST ERROR] {class_name}: {e}")
+            utils.log(f"[SMOKE TEST ERROR] {class_name}: {e}")
             return {
                 "success": False,
                 "runtime": 0.0,
@@ -197,7 +198,7 @@ class Evaluator:
 
             # Check files exist
             if not instance_file.exists():
-                print(f"[EVAL ERROR] Instance not found: {instance_file}")
+                utils.log(f"[EVAL ERROR] Instance not found: {instance_file}")
                 results.append({
                     "instance": instance_name,
                     "success": False,
@@ -206,7 +207,7 @@ class Evaluator:
                 continue
 
             if not warmstart_file.exists():
-                print(f"[EVAL WARNING] Warmstart not found: {warmstart_file}")
+                utils.log(f"[EVAL WARNING] Warmstart not found: {warmstart_file}")
                 warmstart_file = None
 
             # Parse initial cost
@@ -259,11 +260,11 @@ class Evaluator:
                     "exit_code": result.returncode
                 })
 
-                print(f"[EVAL] {instance_name}: {initial_cost:.1f} -> {final_cost:.1f} "
-                      f"(improvement={improvement*100:.3f}%) in {runtime:.1f}s")
+                utils.log(f"[EVAL] {instance_name}: {initial_cost:.1f} -> {final_cost:.1f} "
+                      f"(improvement={improvement*100:.3f}%) in {runtime:.1f}s", level="debug")
 
             except subprocess.TimeoutExpired:
-                print(f"[EVAL TIMEOUT] {instance_name} exceeded {timeout}s")
+                utils.log(f"[EVAL TIMEOUT] {instance_name} exceeded {timeout}s")
                 results.append({
                     "instance": instance_name,
                     "initial_cost": initial_cost,
@@ -275,7 +276,7 @@ class Evaluator:
                 })
 
             except Exception as e:
-                print(f"[EVAL ERROR] {instance_name}: {e}")
+                utils.log(f"[EVAL ERROR] {instance_name}: {e}")
                 results.append({
                     "instance": instance_name,
                     "initial_cost": initial_cost,
@@ -429,7 +430,7 @@ class Evaluator:
         if max_workers is None:
             max_workers = min(len(instances), 5)  # Cap at 5 to avoid overload
 
-        print(f"[PARALLEL EVAL] Evaluating {len(instances)} instances with {max_workers} workers")
+        utils.log(f"[PARALLEL EVAL] Evaluating {len(instances)} instances with {max_workers} workers", level="debug")
 
         results = []
 
@@ -453,14 +454,14 @@ class Evaluator:
 
                     # Log result
                     if result["success"]:
-                        print(f"[EVAL] {instance_name}: {result['initial_cost']:.1f} -> "
+                        utils.log(f"[EVAL] {instance_name}: {result['initial_cost']:.1f} -> "
                               f"{result['final_cost']:.1f} (improvement={result['improvement']*100:.3f}%) "
-                              f"in {result['runtime']:.1f}s")
+                              f"in {result['runtime']:.1f}s", level="debug")
                     else:
-                        print(f"[EVAL ERROR] {instance_name}: {result.get('error', 'Unknown error')}")
+                        utils.log(f"[EVAL ERROR] {instance_name}: {result.get('error', 'Unknown error')}")
 
                 except Exception as e:
-                    print(f"[EVAL EXCEPTION] {instance_name}: {e}")
+                    utils.log(f"[EVAL EXCEPTION] {instance_name}: {e}")
                     results.append({
                         "instance": instance_name,
                         "success": False,
