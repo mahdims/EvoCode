@@ -633,122 +633,126 @@ class EvolutionLoop:
                 idx = task
                 candidate_id = get_next_candidate_id()
 
-                # === Stage 1: Generate ===
-                use_crossover = random.random() < self.crossover_rate
+                try:
+                    # === Stage 1: Generate ===
+                    use_crossover = random.random() < self.crossover_rate
 
-                if use_crossover and len(self.population) >= 2:
-                    better_parent, worse_parent = self.select_parents()
-                    print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
+                    if use_crossover and len(self.population) >= 2:
+                        better_parent, worse_parent = self.select_parents()
+                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
 
-                    short_term_reflection = self.llm.reflect_short_term(
-                        better_code=better_parent["code"],
-                        better_results=better_parent["eval_results"],
-                        worse_code=worse_parent["code"],
-                        worse_results=worse_parent["eval_results"]
-                    )
-                    with results_lock:
-                        self.short_term_reflections.append(short_term_reflection)
-
-                    offspring_code = self.llm.crossover(
-                        parent1_code=better_parent["code"],
-                        parent2_code=worse_parent["code"],
-                        parent1_results=better_parent["eval_results"],
-                        parent2_results=worse_parent["eval_results"],
-                        short_term_reflection=short_term_reflection,
-                        use_vrpagent_bias=self.use_vrpagent,
-                        elite_bias=0.75
-                    )
-                    parent_id = better_parent["candidate_id"]
-                    mutation_type = "crossover"
-                else:
-                    elite_parent = max(self.population, key=lambda x: x["fitness"])
-                    print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
-
-                    mutation_type = None
-                    if self.use_vrpagent:
-                        from vrpagent_prompts import VRPAgentPrompts
-                        mutation_type = VRPAgentPrompts.select_mutation_type(
-                            elite_code=elite_parent["code"],
-                            generation=self.generation,
-                            long_term_reflection=self.long_term_reflection
+                        short_term_reflection = self.llm.reflect_short_term(
+                            better_code=better_parent["code"],
+                            better_results=better_parent["eval_results"],
+                            worse_code=worse_parent["code"],
+                            worse_results=worse_parent["eval_results"]
                         )
+                        with results_lock:
+                            self.short_term_reflections.append(short_term_reflection)
 
-                    offspring_code = self.llm.mutate(
-                        parent_code=elite_parent["code"],
-                        parent_results=elite_parent["eval_results"],
-                        long_term_reflection=self.long_term_reflection,
-                        mutation_strength=0.3,
-                        mutation_type=mutation_type,
+                        offspring_code = self.llm.crossover(
+                            parent1_code=better_parent["code"],
+                            parent2_code=worse_parent["code"],
+                            parent1_results=better_parent["eval_results"],
+                            parent2_results=worse_parent["eval_results"],
+                            short_term_reflection=short_term_reflection,
+                            use_vrpagent_bias=self.use_vrpagent,
+                            elite_bias=0.75
+                        )
+                        parent_id = better_parent["candidate_id"]
+                        mutation_type = "crossover"
+                    else:
+                        elite_parent = max(self.population, key=lambda x: x["fitness"])
+                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
+
+                        mutation_type = None
+                        if self.use_vrpagent:
+                            from vrpagent_prompts import VRPAgentPrompts
+                            mutation_type = VRPAgentPrompts.select_mutation_type(
+                                elite_code=elite_parent["code"],
+                                generation=self.generation,
+                                long_term_reflection=self.long_term_reflection
+                            )
+
+                        offspring_code = self.llm.mutate(
+                            parent_code=elite_parent["code"],
+                            parent_results=elite_parent["eval_results"],
+                            long_term_reflection=self.long_term_reflection,
+                            mutation_strength=0.3,
+                            mutation_type=mutation_type,
+                            generation=self.generation
+                        )
+                        parent_id = elite_parent["candidate_id"]
+                        mutation_type = mutation_type or "mutation"
+
+                    # === Stage 2: Compile ===
+                    compile_result = self.candidate_manager.compile_candidate(
+                        strategy_code=offspring_code,
+                        candidate_id=candidate_id,
+                        parent_id=parent_id,
+                        mutation_type=mutation_type
+                    )
+
+                    if not compile_result:
+                        print(f"[W{worker_id}] Candidate {candidate_id} failed to compile")
+                        continue
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} compiled")
+
+                    # === Stage 3: Smoke Test ===
+                    smoke_result = self.evaluator.smoke_test(
+                        compile_result["jar_path"],
+                        compile_result["wrapper_class"]
+                    )
+
+                    if not smoke_result["success"]:
+                        print(f"[W{worker_id}] Candidate {candidate_id} failed smoke test")
+                        continue
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} passed smoke test")
+
+                    # === Stage 4: Evaluate (instances in parallel) ===
+                    eval_results = self.evaluator.evaluate_endgame_parallel(
+                        compile_result["jar_path"],
+                        compile_result["wrapper_class"],
+                        self.target_instances,
+                        max_workers=self._get_instance_workers()
+                    )
+
+                    base_fitness = self.evaluator.calculate_fitness(eval_results)
+                    fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
+
+                    # Save evaluation results
+                    self.candidate_manager.update_evaluation_results(
+                        candidate_id=candidate_id,
+                        eval_results=eval_results,
+                        fitness=fitness,
+                        base_fitness=base_fitness,
                         generation=self.generation
                     )
-                    parent_id = elite_parent["candidate_id"]
-                    mutation_type = mutation_type or "mutation"
 
-                # === Stage 2: Compile ===
-                compile_result = self.candidate_manager.compile_candidate(
-                    strategy_code=offspring_code,
-                    candidate_id=candidate_id,
-                    parent_id=parent_id,
-                    mutation_type=mutation_type
-                )
+                    offspring = {
+                        "candidate_id": candidate_id,
+                        "code": offspring_code,
+                        "metadata": compile_result,
+                        "eval_results": eval_results,
+                        "fitness": fitness,
+                        "base_fitness": base_fitness,
+                        "generation": self.generation,
+                        "parent_id": parent_id,
+                        "mutation_type": mutation_type
+                    }
 
-                if not compile_result:
-                    print(f"[W{worker_id}] Candidate {candidate_id} failed to compile")
+                    with results_lock:
+                        results.append(offspring)
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
+
+                except Exception as e:
+                    print(f"[W{worker_id}] Candidate {candidate_id} failed with error: {e}")
+
+                finally:
                     task_queue.task_done()
-                    continue
-
-                print(f"[W{worker_id}] Candidate {candidate_id} compiled")
-
-                # === Stage 3: Smoke Test ===
-                smoke_result = self.evaluator.smoke_test(
-                    compile_result["jar_path"],
-                    compile_result["wrapper_class"]
-                )
-
-                if not smoke_result["success"]:
-                    print(f"[W{worker_id}] Candidate {candidate_id} failed smoke test")
-                    task_queue.task_done()
-                    continue
-
-                print(f"[W{worker_id}] Candidate {candidate_id} passed smoke test")
-
-                # === Stage 4: Evaluate (instances in parallel) ===
-                eval_results = self.evaluator.evaluate_endgame_parallel(
-                    compile_result["jar_path"],
-                    compile_result["wrapper_class"],
-                    self.target_instances,
-                    max_workers=len(self.target_instances)  # All instances in parallel
-                )
-
-                base_fitness = self.evaluator.calculate_fitness(eval_results)
-                fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
-
-                # Save evaluation results
-                self.candidate_manager.update_evaluation_results(
-                    candidate_id=candidate_id,
-                    eval_results=eval_results,
-                    fitness=fitness,
-                    base_fitness=base_fitness,
-                    generation=self.generation
-                )
-
-                offspring = {
-                    "candidate_id": candidate_id,
-                    "code": offspring_code,
-                    "metadata": compile_result,
-                    "eval_results": eval_results,
-                    "fitness": fitness,
-                    "base_fitness": base_fitness,
-                    "generation": self.generation,
-                    "parent_id": parent_id,
-                    "mutation_type": mutation_type
-                }
-
-                with results_lock:
-                    results.append(offspring)
-
-                print(f"[W{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
-                task_queue.task_done()
 
         # === Start Workers ===
         actual_workers = min(self.num_workers, num_offspring)
