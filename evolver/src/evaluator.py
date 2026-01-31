@@ -118,11 +118,15 @@ class Evaluator:
         instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
         print(f"[SMOKE TEST] Using instance: {instance_file.name}")
 
-        output_sol = self.temp_dir / "smoke_test.sol"
+        # Use unique output file per candidate to avoid conflicts in parallel execution
+        output_sol = self.temp_dir / f"smoke_test_{class_name}.sol"
 
         # Remove old output
         if output_sol.exists():
-            output_sol.unlink()
+            try:
+                output_sol.unlink()
+            except OSError:
+                pass  # Ignore if file is locked
 
         # Run AILS
         try:
@@ -474,6 +478,89 @@ class Evaluator:
         # Sort results to match input order
         instance_order = {name: i for i, name in enumerate(instances)}
         results.sort(key=lambda x: instance_order.get(x["instance"], 999))
+
+        return results
+
+    def evaluate_candidates_parallel(self,
+                                      candidates: List[Dict[str, Any]],
+                                      instances: List[str],
+                                      seed: int = 42,
+                                      iterations: int = 10000,
+                                      timeout: int = 3600,
+                                      max_candidate_workers: int = 3,
+                                      max_instance_workers: int = 4) -> List[List[Dict[str, Any]]]:
+        """
+        2-level parallel evaluation for multiple candidates.
+
+        Level 1: Candidates evaluated in parallel (max_candidate_workers)
+        Level 2: Instances evaluated in parallel per candidate (max_instance_workers)
+
+        Args:
+            candidates: List of candidate dicts with 'jar_path' and 'class_name' keys
+            instances: List of instance names
+            seed: Random seed
+            iterations: Number of iterations
+            timeout: Timeout in seconds per instance
+            max_candidate_workers: Max parallel candidates (Level 1)
+            max_instance_workers: Max parallel instances per candidate (Level 2)
+
+        Returns:
+            List of evaluation results (one list per candidate)
+        """
+        if not candidates:
+            return []
+
+        actual_candidate_workers = min(max_candidate_workers, len(candidates))
+
+        print(f"[2-LEVEL PARALLEL] Evaluating {len(candidates)} candidates × {len(instances)} instances")
+        print(f"[2-LEVEL PARALLEL] Workers: {actual_candidate_workers} candidates × {max_instance_workers} instances")
+
+        results = [None] * len(candidates)
+
+        with ThreadPoolExecutor(max_workers=actual_candidate_workers) as executor:
+            future_to_idx = {
+                executor.submit(
+                    self.evaluate_endgame_parallel,
+                    c["jar_path"],
+                    c["class_name"],
+                    instances,
+                    seed,
+                    iterations,
+                    timeout,
+                    max_instance_workers
+                ): i
+                for i, c in enumerate(candidates)
+            }
+
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                candidate = candidates[idx]
+                try:
+                    result = future.result(timeout=timeout * len(instances) + 60)
+                    results[idx] = result
+
+                    successful = [r for r in result if r.get("success", False)]
+                    if successful:
+                        avg_improvement = sum(r["improvement"] for r in successful) / len(successful)
+                        print(f"[2-LEVEL PARALLEL] Candidate {idx} ({candidate.get('candidate_id', 'unknown')}): "
+                              f"{len(successful)}/{len(instances)} instances, avg_improvement={avg_improvement*100:.3f}%")
+                    else:
+                        print(f"[2-LEVEL PARALLEL] Candidate {idx}: All instances failed")
+
+                except Exception as e:
+                    print(f"[2-LEVEL PARALLEL ERROR] Candidate {idx}: {e}")
+                    results[idx] = [
+                        {
+                            "instance": inst,
+                            "success": False,
+                            "error": str(e),
+                            "initial_cost": float('inf'),
+                            "final_cost": float('inf'),
+                            "improvement": 0.0,
+                            "runtime": 0.0
+                        }
+                        for inst in instances
+                    ]
 
         return results
 

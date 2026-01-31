@@ -99,6 +99,8 @@ Example `config.json`:
 | `reflection_frequency` | 3 | Generations between long-term reflection |
 | `use_vrpagent` | true | Enable VRPAGENT techniques |
 | `code_length_penalty_alpha` | 0.0 | Parsimony coefficient (0 = disabled) |
+| `num_workers` | 2 | Concurrent candidate pipelines |
+| `instance_workers` | "auto" | Parallel instances per candidate ("auto" = (cpu_count-1) / num_workers) |
 | `resume` | false | Resume from existing candidates |
 | `verbose` | true | Verbose output (false = reflections + best only) |
 | `user_insight` | "" | User guidance string (future use) |
@@ -109,6 +111,20 @@ Example `config.json`:
 |---------|-------|----------|
 | `Vrp_Set_X` | 100-1000 | Quick testing |
 | `XL` | 1000-10000+ | Production |
+
+### Parallelization
+
+Work-stealing pipeline where each worker handles a candidate end-to-end:
+
+```
+Worker 1: Generate → Compile → Smoke → Evaluate → (pick next task)
+Worker 2: Generate → Compile → Smoke → Evaluate → (pick next task)
+```
+
+- `num_workers`: How many candidates processed in parallel
+- `instance_workers`: Parallel VRP instances per candidate evaluation
+  - `"auto"`: Distributes cores fairly: `(cpu_count - 1) / num_workers`
+  - Or set explicit number
 
 ## Output
 

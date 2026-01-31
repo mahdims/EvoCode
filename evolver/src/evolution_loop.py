@@ -33,9 +33,10 @@ class EvolutionLoop:
                  seed: int = 42,
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
-                 max_parallel_evals: int = None,
                  debug: bool = True,
-                 user_insight: str = ""):
+                 user_insight: str = "",
+                 num_workers: int = 2,
+                 instance_workers: str | int = "auto"):
         """
         Initialize evolution loop.
 
@@ -49,9 +50,10 @@ class EvolutionLoop:
             seed: Random seed
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
-            max_parallel_evals: Max parallel instance evaluations (default: min(num_instances, 5))
             debug: If True, show all output. If False, only show reflections and best candidate per generation
             user_insight: User-provided insight string for guiding evolution (reserved for future use)
+            num_workers: Concurrent candidate pipelines (default: 2)
+            instance_workers: Parallel instance evaluations per candidate (default: "auto" = cpu_count // num_workers)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -60,9 +62,10 @@ class EvolutionLoop:
         self.use_vrpagent = use_vrpagent
         self.code_length_penalty_alpha = code_length_penalty_alpha
         self.dataset_dir = dataset_dir
-        self.max_parallel_evals = max_parallel_evals
         self.debug = debug
         self.user_insight = user_insight
+        self.num_workers = num_workers
+        self.instance_workers = instance_workers
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -103,6 +106,18 @@ class EvolutionLoop:
         self.long_term_reflection: Optional[str] = None  # Accumulated knowledge
 
         random.seed(seed)
+
+    def _get_instance_workers(self) -> int:
+        """Calculate number of parallel instance workers per candidate."""
+        import os
+        if self.instance_workers == "auto":
+            # Reserve 1 core for system/monitoring tasks
+            cpu_count = max(1, (os.cpu_count() or 4) - 1)
+            workers = max(1, cpu_count // self.num_workers)
+            # Cap at number of target instances
+            return min(workers, len(self.target_instances))
+        else:
+            return min(int(self.instance_workers), len(self.target_instances))
 
     def _log(self, message: str, level: str = "debug") -> None:
         """
@@ -236,7 +251,7 @@ class EvolutionLoop:
                 result["jar_path"],
                 result["wrapper_class"],
                 self.target_instances,
-                max_workers=self.max_parallel_evals
+                max_workers=self._get_instance_workers()
             )
 
             # Calculate fitness with optional code length penalty
@@ -455,7 +470,7 @@ class EvolutionLoop:
             result["jar_path"],
             result["wrapper_class"],
             self.target_instances,
-            max_workers=self.max_parallel_evals
+            max_workers=self._get_instance_workers()
         )
 
         # Calculate fitness with optional code length penalty
@@ -539,6 +554,7 @@ class EvolutionLoop:
         """
         self._log(f"\n{'='*80}", "info")
         self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
+        self._log(f"MODE: Work-stealing pipeline (workers={self.num_workers}, instance_workers={self._get_instance_workers()})", "info")
         self._log(f"{'='*80}\n", "info")
 
         for gen in range(num_generations):
@@ -547,15 +563,12 @@ class EvolutionLoop:
             self._log(f"GENERATION {self.generation}")
             self._log(f"{'='*80}")
 
-            # Generate offspring
+            # Generate offspring using work-stealing pipeline
             num_offspring = self.population_size - self.elite_size
-            offspring_count = 0
-
-            for i in range(num_offspring):
-                offspring = self.reproduce_with_reflection()
-                if offspring:
-                    self.population.append(offspring)
-                    offspring_count += 1
+            offspring_list = self._evolve_generation_batch(num_offspring)
+            for offspring in offspring_list:
+                self.population.append(offspring)
+            offspring_count = len(offspring_list)
 
             self._log(f"\n[GEN {self.generation}] Generated {offspring_count} valid offspring")
 
@@ -576,6 +589,195 @@ class EvolutionLoop:
 
         # Final statistics
         self.print_final_statistics()
+
+    def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
+        """
+        Evolve one generation using work-stealing pipeline.
+
+        Each worker handles a complete candidate: Generate → Compile → Smoke → Evaluate
+        Workers pull tasks from a shared queue until all offspring are processed.
+        """
+        from queue import Queue
+        from threading import Thread, Lock
+
+        # Task queue: indices of offspring to generate
+        task_queue = Queue()
+        for i in range(num_offspring):
+            task_queue.put(i)
+
+        # Results collection
+        results = []
+        results_lock = Lock()
+
+        # Track candidate IDs
+        candidate_id_counter = [self.candidate_counter]
+        candidate_id_lock = Lock()
+
+        def get_next_candidate_id():
+            with candidate_id_lock:
+                cid = candidate_id_counter[0]
+                candidate_id_counter[0] += 1
+                return cid
+
+        # Sentinel for stopping workers
+        DONE = object()
+
+        def worker(worker_id):
+            """Process candidates end-to-end: Generate → Compile → Smoke → Evaluate."""
+            while True:
+                task = task_queue.get()
+                if task is DONE:
+                    task_queue.task_done()
+                    break
+
+                idx = task
+                candidate_id = get_next_candidate_id()
+
+                try:
+                    # === Stage 1: Generate ===
+                    use_crossover = random.random() < self.crossover_rate
+
+                    if use_crossover and len(self.population) >= 2:
+                        better_parent, worse_parent = self.select_parents()
+                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
+
+                        short_term_reflection = self.llm.reflect_short_term(
+                            better_code=better_parent["code"],
+                            better_results=better_parent["eval_results"],
+                            worse_code=worse_parent["code"],
+                            worse_results=worse_parent["eval_results"]
+                        )
+                        with results_lock:
+                            self.short_term_reflections.append(short_term_reflection)
+
+                        offspring_code = self.llm.crossover(
+                            parent1_code=better_parent["code"],
+                            parent2_code=worse_parent["code"],
+                            parent1_results=better_parent["eval_results"],
+                            parent2_results=worse_parent["eval_results"],
+                            short_term_reflection=short_term_reflection,
+                            use_vrpagent_bias=self.use_vrpagent,
+                            elite_bias=0.75
+                        )
+                        parent_id = better_parent["candidate_id"]
+                        mutation_type = "crossover"
+                    else:
+                        elite_parent = max(self.population, key=lambda x: x["fitness"])
+                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
+
+                        mutation_type = None
+                        if self.use_vrpagent:
+                            from vrpagent_prompts import VRPAgentPrompts
+                            mutation_type = VRPAgentPrompts.select_mutation_type(
+                                elite_code=elite_parent["code"],
+                                generation=self.generation,
+                                long_term_reflection=self.long_term_reflection
+                            )
+
+                        offspring_code = self.llm.mutate(
+                            parent_code=elite_parent["code"],
+                            parent_results=elite_parent["eval_results"],
+                            long_term_reflection=self.long_term_reflection,
+                            mutation_strength=0.3,
+                            mutation_type=mutation_type,
+                            generation=self.generation
+                        )
+                        parent_id = elite_parent["candidate_id"]
+                        mutation_type = mutation_type or "mutation"
+
+                    # === Stage 2: Compile ===
+                    compile_result = self.candidate_manager.compile_candidate(
+                        strategy_code=offspring_code,
+                        candidate_id=candidate_id,
+                        parent_id=parent_id,
+                        mutation_type=mutation_type
+                    )
+
+                    if not compile_result:
+                        print(f"[W{worker_id}] Candidate {candidate_id} failed to compile")
+                        continue
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} compiled")
+
+                    # === Stage 3: Smoke Test ===
+                    smoke_result = self.evaluator.smoke_test(
+                        compile_result["jar_path"],
+                        compile_result["wrapper_class"]
+                    )
+
+                    if not smoke_result["success"]:
+                        print(f"[W{worker_id}] Candidate {candidate_id} failed smoke test")
+                        continue
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} passed smoke test")
+
+                    # === Stage 4: Evaluate (instances in parallel) ===
+                    eval_results = self.evaluator.evaluate_endgame_parallel(
+                        compile_result["jar_path"],
+                        compile_result["wrapper_class"],
+                        self.target_instances,
+                        max_workers=self._get_instance_workers()
+                    )
+
+                    base_fitness = self.evaluator.calculate_fitness(eval_results)
+                    fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
+
+                    # Save evaluation results
+                    self.candidate_manager.update_evaluation_results(
+                        candidate_id=candidate_id,
+                        eval_results=eval_results,
+                        fitness=fitness,
+                        base_fitness=base_fitness,
+                        generation=self.generation
+                    )
+
+                    offspring = {
+                        "candidate_id": candidate_id,
+                        "code": offspring_code,
+                        "metadata": compile_result,
+                        "eval_results": eval_results,
+                        "fitness": fitness,
+                        "base_fitness": base_fitness,
+                        "generation": self.generation,
+                        "parent_id": parent_id,
+                        "mutation_type": mutation_type
+                    }
+
+                    with results_lock:
+                        results.append(offspring)
+
+                    print(f"[W{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
+
+                except Exception as e:
+                    print(f"[W{worker_id}] Candidate {candidate_id} failed with error: {e}")
+
+                finally:
+                    task_queue.task_done()
+
+        # === Start Workers ===
+        actual_workers = min(self.num_workers, num_offspring)
+        print(f"\n[PIPELINE] Starting {actual_workers} workers for {num_offspring} offspring")
+
+        workers = [Thread(target=worker, args=(i,), daemon=True) for i in range(actual_workers)]
+        for w in workers:
+            w.start()
+
+        # Wait for all tasks to complete
+        task_queue.join()
+
+        # Signal workers to stop
+        for _ in range(actual_workers):
+            task_queue.put(DONE)
+
+        # Wait for workers to finish
+        for w in workers:
+            w.join(timeout=1)
+
+        # Update candidate counter
+        self.candidate_counter = candidate_id_counter[0]
+
+        print(f"[PIPELINE] Complete: {len(results)}/{num_offspring} offspring evaluated")
+        return results
 
     def _calculate_fitness_with_penalty(self, code: str, base_fitness: float) -> float:
         """
