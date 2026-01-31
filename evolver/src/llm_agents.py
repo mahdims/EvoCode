@@ -143,7 +143,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 ```
 """
 
-    def generate_initial_seed(self, seed_id: int) -> str:
+    def generate_initial_seed(self, seed_id: int) -> tuple:
         """
         Generate initial seed strategy.
 
@@ -151,10 +151,14 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
             seed_id: Seed identifier (0, 1, 2, ...)
 
         Returns:
-            Java source code for DestroyStrategy implementation
+            (idea, code) tuple with idea description and Java source code
         """
-        # For now, return template-based seeds
-        # In production, this would call LLM API
+        # Template-based seeds with companion ideas
+        seed_ideas = [
+            "Randomly selects nodes from valid candidates, providing baseline diversity without spatial structure.",
+            "Removes nodes with highest cost contribution (distance to prev+next), targeting problematic nodes for reconstruction.",
+            "Uses KNN-based spatial clustering to select geographically coherent node groups, improving repair efficiency through locality."
+        ]
 
         seeds = [
             self._template_random_removal(),
@@ -163,10 +167,10 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
         ]
 
         if seed_id < len(seeds):
-            return seeds[seed_id]
+            return seed_ideas[seed_id], seeds[seed_id]
         else:
             # Return random as fallback
-            return self._template_random_removal()
+            return seed_ideas[0], self._template_random_removal()
 
     def mutate(self,
                parent_code: str,
@@ -174,7 +178,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                long_term_reflection: Optional[str] = None,
                mutation_strength: float = 0.3,
                mutation_type: Optional[str] = None,
-               generation: int = 0) -> str:
+               generation: int = 0,
+               parent_idea: Optional[str] = None) -> tuple:
         """
         Mutate existing strategy with optional long-term reflection guidance.
 
@@ -188,9 +193,10 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
             mutation_type: VRPAGENT mutation type (ablation/extend/adjust_parameters/refactor)
                           If None, uses basic reflection-guided mutation
             generation: Current generation (used to select mutation type if not specified)
+            parent_idea: High-level idea/concept of parent strategy
 
         Returns:
-            Java source code for mutated strategy
+            (idea, code) tuple with idea description and Java source code
         """
         from reflection_prompts import ReflectionPrompts
         from vrpagent_prompts import VRPAgentPrompts
@@ -202,7 +208,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 elite_results=parent_results,
                 mutation_type=mutation_type,
                 long_term_reflection=long_term_reflection,
-                mutation_strength=mutation_strength
+                mutation_strength=mutation_strength,
+                parent_idea=parent_idea
             )
             print(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
         elif long_term_reflection and parent_results:
@@ -211,7 +218,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 elite_code=parent_code,
                 elite_results=parent_results,
                 long_term_knowledge=long_term_reflection,
-                mutation_strength=mutation_strength
+                mutation_strength=mutation_strength,
+                parent_idea=parent_idea
             )
             print(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
         else:
@@ -227,16 +235,23 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                     model=self.model_name,
                     contents=prompt
                 )
-                code = self._extract_java_code(response.text)
-                print(f"[LLM MUTATION] Generated {len(code)} chars of code")
-                return code
+                idea, code = self._extract_idea_and_code(response.text)
+                if idea is None or code is None:
+                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    print("[LLM] Falling back to template mutation")
+                    fallback_idea = f"Mutated version of parent strategy ({mutation_type or 'generic'} mutation)."
+                    return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
+                print(f"[LLM MUTATION] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                return idea, code
             except Exception as e:
                 print(f"[LLM ERROR] Mutation failed: {e}")
                 print("[LLM] Falling back to template mutation")
-                return self._add_mutation_comment(parent_code, "MUTATED")
+                fallback_idea = "Mutated version of parent strategy."
+                return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
         else:
             # Placeholder: return parent code with comment
-            return self._add_mutation_comment(parent_code, "MUTATED")
+            fallback_idea = "Template-based mutation (LLM disabled)."
+            return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
 
     def crossover(self,
                   parent1_code: str,
@@ -245,7 +260,9 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                   parent2_results: Optional[List[Dict[str, Any]]] = None,
                   short_term_reflection: Optional[str] = None,
                   use_vrpagent_bias: bool = True,
-                  elite_bias: float = 0.75) -> str:
+                  elite_bias: float = 0.75,
+                  parent1_idea: Optional[str] = None,
+                  parent2_idea: Optional[str] = None) -> tuple:
         """
         Crossover between two strategies with optional reflection guidance.
 
@@ -259,9 +276,11 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
             short_term_reflection: Optional short-term reflection comparing the parents
             use_vrpagent_bias: Whether to use VRPAGENT biased crossover (default: True)
             elite_bias: Percentage to favor elite parent (default: 0.75)
+            parent1_idea: High-level idea/concept of parent 1 (better)
+            parent2_idea: High-level idea/concept of parent 2 (worse)
 
         Returns:
-            Java source code for offspring strategy
+            (idea, code) tuple with idea description and Java source code
         """
         from reflection_prompts import ReflectionPrompts
         from vrpagent_prompts import VRPAgentPrompts
@@ -274,7 +293,9 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 non_elite_code=parent2_code,
                 non_elite_results=parent2_results,
                 short_term_reflection=short_term_reflection,
-                elite_bias=elite_bias
+                elite_bias=elite_bias,
+                elite_idea=parent1_idea,
+                non_elite_idea=parent2_idea
             )
             print(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
         elif short_term_reflection:
@@ -282,7 +303,9 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
             prompt = ReflectionPrompts.crossover_with_short_term_reflection(
                 better_code=parent1_code,
                 worse_code=parent2_code,
-                short_term_insight=short_term_reflection
+                short_term_insight=short_term_reflection,
+                parent1_idea=parent1_idea,
+                parent2_idea=parent2_idea
             )
             print(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
         else:
@@ -298,16 +321,23 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                     model=self.model_name,
                     contents=prompt
                 )
-                code = self._extract_java_code(response.text)
-                print(f"[LLM CROSSOVER] Generated {len(code)} chars of code")
-                return code
+                idea, code = self._extract_idea_and_code(response.text)
+                if idea is None or code is None:
+                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    print("[LLM] Falling back to template crossover")
+                    fallback_idea = "Crossover offspring combining features from both parents."
+                    return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
+                print(f"[LLM CROSSOVER] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                return idea, code
             except Exception as e:
                 print(f"[LLM ERROR] Crossover failed: {e}")
                 print("[LLM] Falling back to template crossover")
-                return self._add_mutation_comment(parent1_code, "CROSSOVER")
+                fallback_idea = "Crossover offspring from parents."
+                return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
         else:
             # Placeholder: return parent1 with comment
-            return self._add_mutation_comment(parent1_code, "CROSSOVER")
+            fallback_idea = "Template-based crossover (LLM disabled)."
+            return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
 
     def reflect_short_term(self,
                            better_code: str,
@@ -596,6 +626,40 @@ CROSSOVER GUIDANCE:
 
 Return only the complete Java class code, no explanations, no markdown.
 """
+
+    def _extract_idea_and_code(self, llm_response: str) -> tuple:
+        """
+        Extract both IDEA and CODE sections from LLM response.
+
+        Handles the dual-section format where LLM provides both idea and code.
+
+        Args:
+            llm_response: Raw LLM response text
+
+        Returns:
+            (idea_text, code_text) or (None, None) if parsing fails
+        """
+        import re
+
+        # Find ## IDEA section (just 1-2 sentences, not structured)
+        idea_match = re.search(r'##\s*IDEA\s*[:\s]*(.*?)(?=##\s*CODE|\Z)', llm_response, re.DOTALL | re.IGNORECASE)
+
+        # Find ## CODE section with java block
+        code_match = re.search(r'##\s*CODE\s*\n```java\s*\n(.*?)\n```', llm_response, re.DOTALL | re.IGNORECASE)
+
+        if not idea_match or not code_match:
+            print("[PARSE ERROR] Missing IDEA or CODE section in LLM response")
+            # Try fallback: maybe LLM only provided code
+            code_fallback = self._extract_java_code(llm_response)
+            if code_fallback and len(code_fallback) > 50:  # Valid code found
+                print("[PARSE FALLBACK] Found code without IDEA section, using placeholder idea")
+                return ("LLM-generated strategy without explicit idea description.", code_fallback)
+            return None, None
+
+        idea_text = idea_match.group(1).strip()
+        code_text = code_match.group(1).strip()
+
+        return idea_text, code_text
 
     def _extract_java_code(self, llm_response: str) -> str:
         """

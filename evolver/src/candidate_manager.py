@@ -218,6 +218,8 @@ public class {wrapper_class} extends Perturbation {{
     def compile_candidate(self,
                          strategy_code: str,
                          candidate_id: int,
+                         idea: Optional[str] = None,
+                         generation: int = 0,
                          parent_id: Optional[int] = None,
                          mutation_type: str = "initial") -> Optional[Dict[str, Any]]:
         """
@@ -226,6 +228,8 @@ public class {wrapper_class} extends Perturbation {{
         Args:
             strategy_code: Java source code for DestroyStrategy implementation
             candidate_id: Unique candidate ID
+            idea: High-level idea/concept description
+            generation: Generation number for tagging idea files
             parent_id: Parent candidate ID (if mutation/crossover)
             mutation_type: Type of generation (initial, mutation, crossover)
 
@@ -304,6 +308,7 @@ public class {wrapper_class} extends Perturbation {{
             "candidate_id": candidate_id,
             "parent_id": parent_id,
             "mutation_type": mutation_type,
+            "idea": idea,  # NEW FIELD
             "strategy_class": strategy_class,
             "wrapper_class": wrapper_class,
             "code_hash": code_hash,
@@ -315,6 +320,16 @@ public class {wrapper_class} extends Perturbation {{
         metadata_file = candidate_dir / "metadata.json"
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f, indent=2)
+
+        # Save idea to generation-tagged file
+        if idea:
+            idea_file = candidate_dir / f"idea_gen{generation:04d}.md"
+            with open(idea_file, 'w') as f:
+                f.write(f"# Generation {generation} - Candidate {candidate_id}\n\n")
+                f.write(f"**Mutation Type:** {mutation_type}\n\n")
+                if parent_id is not None:
+                    f.write(f"**Parent ID:** {parent_id}\n\n")
+                f.write(f"## Idea\n\n{idea}\n")
 
         # Update cache
         self.cache[code_hash] = metadata

@@ -190,7 +190,9 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
     def crossover_with_short_term_reflection(
         better_code: str,
         worse_code: str,
-        short_term_insight: str
+        short_term_insight: str,
+        parent1_idea: str = None,
+        parent2_idea: str = None
     ) -> str:
         """
         Crossover Prompt with Short-Term Reflection Guidance
@@ -201,6 +203,8 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
             better_code: Better parent's code
             worse_code: Worse parent's code
             short_term_insight: Insight from short-term reflection comparing these parents
+            parent1_idea: High-level idea/concept of parent 1 (better)
+            parent2_idea: High-level idea/concept of parent 2 (worse)
 
         Returns:
             Prompt for LLM to generate crossover offspring
@@ -208,16 +212,20 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
         better_class = ReflectionPrompts._extract_class_name(better_code)
         worse_class = ReflectionPrompts._extract_class_name(worse_code)
 
+        # Include parent ideas if available
+        parent1_idea_section = f"\nPARENT 1 IDEA: {parent1_idea}\n" if parent1_idea else ""
+        parent2_idea_section = f"\nPARENT 2 IDEA: {parent2_idea}\n" if parent2_idea else ""
+
         prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
 
 TASK: Combine two parent strategies to create an offspring that inherits the strengths of both, guided by comparative analysis.
 
-=== PARENT 1 (BETTER PERFORMER): {better_class} ===
+=== PARENT 1 (BETTER PERFORMER): {better_class} ==={parent1_idea_section}
 ```java
 {better_code}
 ```
 
-=== PARENT 2 (WORSE PERFORMER): {worse_class} ===
+=== PARENT 2 (WORSE PERFORMER): {worse_class} ==={parent2_idea_section}
 ```java
 {worse_code}
 ```
@@ -266,7 +274,20 @@ CROSSOVER GUIDANCE:
 - Create a new class name (not same as either parent)
 - Ensure the logic flows coherently
 
-Return only the complete Java class code, no explanations, no markdown blocks."""
+=== OUTPUT FORMAT ===
+You MUST provide your response in TWO sections:
+
+## IDEA
+[1-2 concise sentences describing the offspring strategy approach and why it was chosen. Be specific but brief.]
+
+Example: "Uses KNN-based clustering starting from high-cost nodes to select spatially coherent regions for removal, chosen because clustered removal improves repair efficiency while cost-based seeding targets problematic areas."
+
+## CODE
+```java
+[Complete Java implementation]
+```
+
+Return your response exactly in this format with both IDEA and CODE sections."""
 
         return prompt
 
@@ -275,7 +296,8 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
         elite_code: str,
         elite_results: dict,
         long_term_knowledge: str,
-        mutation_strength: float = 0.3
+        mutation_strength: float = 0.3,
+        parent_idea: str = None
     ) -> str:
         """
         Mutation Prompt with Long-Term Reflection Guidance
@@ -287,6 +309,7 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
             elite_results: Evaluation results for elite
             long_term_knowledge: Accumulated knowledge from long-term reflection
             mutation_strength: Mutation strength (0.0-1.0)
+            parent_idea: High-level idea/concept of parent strategy
 
         Returns:
             Prompt for LLM to generate mutated strategy
@@ -296,11 +319,14 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
         improvements = [r.get("improvement", 0.0) for r in elite_results if r.get("success", False)]
         avg_improvement = sum(improvements) / len(improvements) if improvements else 0.0
 
+        # Include parent idea if available
+        parent_idea_section = f"\nPARENT IDEA: {parent_idea}\n" if parent_idea else ""
+
         prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
 
 TASK: Mutate the current elite destroy strategy to improve solution quality, guided by accumulated evolutionary knowledge.
 
-=== CURRENT ELITE STRATEGY: {elite_class} ===
+=== CURRENT ELITE STRATEGY: {elite_class} ==={parent_idea_section}
 ```java
 {elite_code}
 ```
@@ -365,7 +391,20 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 
-Return only the complete Java class code, no explanations, no markdown blocks."""
+=== OUTPUT FORMAT ===
+You MUST provide your response in TWO sections:
+
+## IDEA
+[1-2 concise sentences describing the mutated strategy approach and why this mutation was chosen. Be specific but brief.]
+
+Example: "Combines KNN-based clustering with adaptive cluster radius based on numToRemove, chosen to improve scalability while preserving the spatial locality that makes the parent effective."
+
+## CODE
+```java
+[Complete Java implementation]
+```
+
+Return your response exactly in this format with both IDEA and CODE sections."""
 
         return prompt
 

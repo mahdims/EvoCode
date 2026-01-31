@@ -18,6 +18,7 @@ from pathlib import Path
 from candidate_manager import CandidateManager
 from evaluator import Evaluator
 from llm_agents import LLMAgents
+from diversity_checker import DiversityChecker
 
 
 class EvolutionLoop:
@@ -36,7 +37,8 @@ class EvolutionLoop:
                  debug: bool = True,
                  user_insight: str = "",
                  num_workers: int = 2,
-                 instance_workers: str | int = "auto"):
+                 instance_workers: str | int = "auto",
+                 max_parallel_evals: int = None):
         """
         Initialize evolution loop.
 
@@ -54,6 +56,9 @@ class EvolutionLoop:
             user_insight: User-provided insight string for guiding evolution (reserved for future use)
             num_workers: Concurrent candidate pipelines (default: 2)
             instance_workers: Parallel instance evaluations per candidate (default: "auto" = cpu_count // num_workers)
+            max_parallel_evals: Maximum total parallel workers. If set, intelligently divides budget:
+                               instance_workers = min(num_instances, max_parallel_evals)
+                               num_workers = max(1, max_parallel_evals // instance_workers)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -64,8 +69,6 @@ class EvolutionLoop:
         self.dataset_dir = dataset_dir
         self.debug = debug
         self.user_insight = user_insight
-        self.num_workers = num_workers
-        self.instance_workers = instance_workers
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -96,6 +99,19 @@ class EvolutionLoop:
         else:
             self.target_instances = target_instances
 
+        # Handle max_parallel_evals: controls TOTAL parallelization budget
+        # Total workers = num_workers (candidate pipelines) * instance_workers (per candidate)
+        if max_parallel_evals is not None:
+            # Intelligently divide budget between instance and candidate parallelism
+            num_instances = len(self.target_instances)
+            # Use up to all instances in parallel, but not more than budget
+            self.instance_workers = min(num_instances, max_parallel_evals)
+            # Use remaining budget for candidate pipelines
+            self.num_workers = max(1, max_parallel_evals // self.instance_workers)
+        else:
+            self.num_workers = num_workers
+            self.instance_workers = instance_workers
+
         # Population tracking
         self.population: List[Dict[str, Any]] = []
         self.generation = 0
@@ -104,6 +120,9 @@ class EvolutionLoop:
         # Reflection tracking (ReEvo-style)
         self.short_term_reflections: List[str] = []  # Recent comparisons
         self.long_term_reflection: Optional[str] = None  # Accumulated knowledge
+
+        # Diversity tracking (Idea-based)
+        self.diversity_checker = DiversityChecker(similarity_threshold=0.80)
 
         random.seed(seed)
 
@@ -180,6 +199,7 @@ class EvolutionLoop:
                 candidate = {
                     "candidate_id": metadata["candidate_id"],
                     "code": code,
+                    "idea": metadata.get("idea"),  # None if missing (backward compat)
                     "metadata": metadata,
                     "eval_results": eval_data.get("instances", []),
                     "fitness": eval_data.get("fitness", 0),
@@ -223,12 +243,14 @@ class EvolutionLoop:
         self._log(f"[INIT] Generating {num_seeds} seed strategies...")
 
         for i in range(num_seeds):
-            strategy_code = self.llm.generate_initial_seed(i)
+            idea, strategy_code = self.llm.generate_initial_seed(i)
 
             # Compile
             result = self.candidate_manager.compile_candidate(
                 strategy_code=strategy_code,
                 candidate_id=self.candidate_counter,
+                idea=idea,  # NEW
+                generation=self.generation,  # NEW
                 mutation_type="initial_seed"
             )
 
@@ -270,14 +292,19 @@ class EvolutionLoop:
             self.population.append({
                 "candidate_id": self.candidate_counter,
                 "code": strategy_code,
+                "idea": idea,  # NEW FIELD
                 "metadata": result,
                 "eval_results": eval_results,
                 "fitness": fitness,
                 "base_fitness": base_fitness,
-                "generation": 0
+                "generation": 0,
+                "parent_id": None,
+                "mutation_type": "initial_seed"
             })
 
             self._log(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
+            if self.debug:
+                self._log(f"[INIT] Idea: {idea[:100]}...")
             self.candidate_counter += 1
 
         self._log(f"[INIT] Population size: {len(self.population)}")
@@ -334,22 +361,52 @@ class EvolutionLoop:
 
     def reproduce_with_reflection(self) -> Optional[Dict[str, Any]]:
         """
-        Generate offspring using reflection-guided reproduction.
+        Generate offspring using reflection-guided reproduction with diversity check.
 
         Following ReEvo framework:
         - For crossover: Use short-term reflection comparing two parents
         - For mutation: Use long-term reflection (accumulated knowledge)
+        - Retry if offspring is not diverse enough (conceptual similarity)
 
         Returns:
             New candidate dict or None if reproduction failed
         """
-        # Decide: mutation or crossover
-        use_crossover = random.random() < self.crossover_rate
+        max_diversity_attempts = 3
 
-        if use_crossover and len(self.population) >= 2:
-            return self._crossover_with_short_term_reflection()
-        else:
-            return self._mutate_with_long_term_reflection()
+        for attempt in range(max_diversity_attempts):
+            # Decide: mutation or crossover
+            use_crossover = random.random() < self.crossover_rate
+
+            if use_crossover and len(self.population) >= 2:
+                offspring = self._crossover_with_short_term_reflection()
+            else:
+                offspring = self._mutate_with_long_term_reflection()
+
+            if offspring is None:
+                continue  # Compilation failed, retry
+
+            # CHECK DIVERSITY
+            new_idea = offspring.get("idea")
+            if new_idea is None:
+                self._log("[DIVERSITY] No idea in offspring, skipping diversity check")
+                return offspring
+
+            population_ideas = [c.get("idea") for c in self.population if c.get("idea") is not None]
+
+            if self.diversity_checker.is_diverse(new_idea, population_ideas):
+                self._log(f"[DIVERSITY] Offspring is diverse (attempt {attempt+1})")
+                return offspring
+            else:
+                similar = self.diversity_checker.find_most_similar(new_idea, population_ideas)
+                if similar:
+                    idx, score = similar
+                    similar_id = self.population[idx]["candidate_id"]
+                    self._log(f"[DIVERSITY] Offspring too similar to candidate {similar_id} "
+                            f"(similarity={score:.2f}), retrying... (attempt {attempt+1})")
+                continue
+
+        self._log(f"[DIVERSITY] Failed to generate diverse offspring after {max_diversity_attempts} attempts")
+        return None
 
     def _crossover_with_short_term_reflection(self) -> Optional[Dict[str, Any]]:
         """
@@ -379,19 +436,26 @@ class EvolutionLoop:
         self.short_term_reflections.append(short_term_reflection)
         self._log_reflection(f"[REFLECTION] Short-term insight: {short_term_reflection[:200]}...")
 
+        # Get parent ideas for context
+        parent1_idea = better_parent.get("idea")
+        parent2_idea = worse_parent.get("idea")
+
         # Generate offspring using reflection + optional VRPAGENT bias
-        offspring_code = self.llm.crossover(
+        offspring_idea, offspring_code = self.llm.crossover(
             parent1_code=better_parent["code"],
             parent2_code=worse_parent["code"],
             parent1_results=better_parent["eval_results"],
             parent2_results=worse_parent["eval_results"],
             short_term_reflection=short_term_reflection,
+            parent1_idea=parent1_idea,
+            parent2_idea=parent2_idea,
             use_vrpagent_bias=self.use_vrpagent,
             elite_bias=0.75  # VRPAGENT: 75% from elite, 25% from non-elite
         )
 
         return self._compile_and_evaluate_offspring(
             offspring_code,
+            offspring_idea,
             parent_id=better_parent["candidate_id"],
             mutation_type="crossover"
         )
@@ -422,11 +486,15 @@ class EvolutionLoop:
         else:
             mutation_type = None
 
+        # Get parent idea for context
+        parent_idea = elite_parent.get("idea")
+
         # Generate offspring using long-term reflection + optional typed mutation
-        offspring_code = self.llm.mutate(
+        offspring_idea, offspring_code = self.llm.mutate(
             parent_code=elite_parent["code"],
             parent_results=elite_parent["eval_results"],
             long_term_reflection=self.long_term_reflection,
+            parent_idea=parent_idea,
             mutation_strength=0.3,
             mutation_type=mutation_type,
             generation=self.generation
@@ -434,12 +502,14 @@ class EvolutionLoop:
 
         return self._compile_and_evaluate_offspring(
             offspring_code,
+            offspring_idea,
             parent_id=elite_parent["candidate_id"],
             mutation_type=mutation_type or "mutation"
         )
 
     def _compile_and_evaluate_offspring(self,
                                        offspring_code: str,
+                                       offspring_idea: str,
                                        parent_id: int,
                                        mutation_type: str) -> Optional[Dict[str, Any]]:
         """Compile and evaluate offspring."""
@@ -447,6 +517,8 @@ class EvolutionLoop:
         result = self.candidate_manager.compile_candidate(
             strategy_code=offspring_code,
             candidate_id=self.candidate_counter,
+            idea=offspring_idea,
+            generation=self.generation,
             parent_id=parent_id,
             mutation_type=mutation_type
         )
@@ -489,6 +561,7 @@ class EvolutionLoop:
         offspring = {
             "candidate_id": self.candidate_counter,
             "code": offspring_code,
+            "idea": offspring_idea,
             "metadata": result,
             "eval_results": eval_results,
             "fitness": fitness,
@@ -499,6 +572,9 @@ class EvolutionLoop:
         }
 
         self._log(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness*100:.4f}%")
+        if offspring_idea:
+            idea_preview = offspring_idea[:100] + "..." if len(offspring_idea) > 100 else offspring_idea
+            self._log(f"[OFFSPRING] Idea: {idea_preview}", level="debug")
         self.candidate_counter += 1
 
         return offspring
@@ -589,6 +665,9 @@ class EvolutionLoop:
 
         # Final statistics
         self.print_final_statistics()
+
+        # Save idea evolution log
+        self.save_idea_evolution_log()
 
     def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
         """
@@ -818,6 +897,12 @@ class EvolutionLoop:
         if self.use_vrpagent and "base_fitness" in best:
             self._log(f"Best base fitness (no penalty): {best['base_fitness']*100:.4f}%", "info")
         self._log(f"Best generation: {best['generation']}", "info")
+
+        # Show best candidate's idea
+        if best.get("idea"):
+            self._log(f"\nBest candidate idea:", "info")
+            self._log(f"  {best['idea']}", "info")
+
         self._log(f"\nBest candidate performance:", "info")
         for result in best["eval_results"]:
             instance_name = result.get('instance', result.get('name', 'unknown'))
@@ -833,6 +918,35 @@ class EvolutionLoop:
             self._log(f"\nBest candidate code length: {code_lines} lines", "info")
 
         self._log(f"\n{'='*80}\n", "info")
+
+    def save_idea_evolution_log(self, log_file: str = "candidates/idea_evolution.md") -> None:
+        """Save evolution history of ideas for analysis."""
+        with open(log_file, 'w') as f:
+            f.write("# Idea Evolution Log\n\n")
+            f.write(f"Generated from {len(self.population)} candidates\n\n")
+
+            # Sort by generation
+            sorted_pop = sorted(self.population, key=lambda x: x.get("generation", 0))
+
+            for candidate in sorted_pop:
+                f.write(f"## Generation {candidate.get('generation', 0)} - "
+                       f"Candidate {candidate['candidate_id']}\n\n")
+                f.write(f"**Fitness:** {candidate['fitness']*100:.4f}%\n\n")
+                f.write(f"**Mutation Type:** {candidate.get('mutation_type', 'unknown')}\n\n")
+
+                if candidate.get("parent_id") is not None:
+                    f.write(f"**Parent ID:** {candidate['parent_id']}\n\n")
+
+                if candidate.get("idea"):
+                    f.write("### Idea\n\n")
+                    f.write(candidate["idea"])
+                    f.write("\n\n")
+                else:
+                    f.write("*[No idea available - legacy candidate]*\n\n")
+
+                f.write("---\n\n")
+
+        self._log(f"[LOG] Saved idea evolution to {log_file}", "info")
 
 
 # Example usage

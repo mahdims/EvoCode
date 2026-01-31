@@ -28,7 +28,9 @@ class VRPAgentPrompts:
         non_elite_code: str,
         non_elite_results: Dict[str, Any],
         short_term_reflection: Optional[str] = None,
-        elite_bias: float = 0.75
+        elite_bias: float = 0.75,
+        elite_idea: str = None,
+        non_elite_idea: str = None
     ) -> str:
         """
         VRPAGENT Biased Crossover + ReEvo Short-Term Reflection
@@ -42,6 +44,8 @@ class VRPAgentPrompts:
             non_elite_results: Non-elite's evaluation results
             short_term_reflection: Optional ReEvo reflection comparing the parents
             elite_bias: Percentage to take from elite (default: 75%)
+            elite_idea: High-level idea/concept of elite parent
+            non_elite_idea: High-level idea/concept of non-elite parent
 
         Returns:
             Prompt for biased crossover with reflection guidance
@@ -58,11 +62,15 @@ class VRPAgentPrompts:
         non_elite_percentage = int((1 - elite_bias) * 100)
         elite_percentage = int(elite_bias * 100)
 
+        # Include parent ideas if available
+        elite_idea_section = f"\nELITE IDEA: {elite_idea}\n" if elite_idea else ""
+        non_elite_idea_section = f"\nNON-ELITE IDEA: {non_elite_idea}\n" if non_elite_idea else ""
+
         prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
 
 TASK: Perform BIASED CROSSOVER to create an offspring that inherits primarily from the elite parent.
 
-=== ELITE PARENT: {elite_class} (BETTER) ===
+=== ELITE PARENT: {elite_class} (BETTER) ==={elite_idea_section}
 ```java
 {elite_code}
 ```
@@ -72,7 +80,7 @@ PERFORMANCE:
 - Per-instance results:
 {VRPAgentPrompts._format_results(elite_results)}
 
-=== NON-ELITE PARENT: {non_elite_class} (WORSE) ===
+=== NON-ELITE PARENT: {non_elite_class} (WORSE) ==={non_elite_idea_section}
 ```java
 {non_elite_code}
 ```
@@ -140,7 +148,20 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 
-Return only the complete Java class code, no explanations, no markdown blocks."""
+=== OUTPUT FORMAT ===
+You MUST provide your response in TWO sections:
+
+## IDEA
+[1-2 concise sentences describing the offspring strategy approach and why it was chosen. Be specific but brief.]
+
+Example: "Uses KNN-based clustering with {elite_percentage}% emphasis on the elite's cost-based seeding approach, chosen to preserve proven efficiency while adding minor diversity from non-elite's adaptive selection."
+
+## CODE
+```java
+[Complete Java implementation]
+```
+
+Return your response exactly in this format with both IDEA and CODE sections."""
 
         return prompt
 
@@ -150,7 +171,8 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
         elite_results: List[Dict[str, Any]],
         mutation_type: str,
         long_term_reflection: Optional[str] = None,
-        mutation_strength: float = 0.3
+        mutation_strength: float = 0.3,
+        parent_idea: str = None
     ) -> str:
         """
         VRPAGENT Typed Mutation + ReEvo Long-Term Reflection
@@ -163,6 +185,7 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
             mutation_type: One of ["ablation", "extend", "adjust_parameters", "refactor"]
             long_term_reflection: Optional accumulated knowledge from ReEvo
             mutation_strength: Mutation strength (0.0-1.0)
+            parent_idea: High-level idea/concept of parent strategy
 
         Returns:
             Prompt for typed mutation with reflection guidance
@@ -174,6 +197,9 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
         # Handle cases where improvement might not be present (e.g., evaluation failed)
         improvements = [r.get("improvement", 0.0) for r in elite_results if r.get("success", False)]
         elite_avg = sum(improvements) / len(improvements) if improvements else 0.0
+
+        # Include parent idea if available
+        parent_idea_section = f"\nPARENT IDEA: {parent_idea}\n" if parent_idea else ""
 
         # Type-specific instructions
         type_instructions = {
@@ -273,7 +299,7 @@ Return only the complete Java class code, no explanations, no markdown blocks.""
 
 TASK: Apply {mutation_type.upper()} mutation to the elite destroy strategy.
 
-=== ELITE STRATEGY: {elite_class} ===
+=== ELITE STRATEGY: {elite_class} ==={parent_idea_section}
 ```java
 {elite_code}
 ```
@@ -324,7 +350,20 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 
-Return only the complete Java class code, no explanations, no markdown blocks."""
+=== OUTPUT FORMAT ===
+You MUST provide your response in TWO sections:
+
+## IDEA
+[1-2 concise sentences describing the mutated strategy approach and why this {mutation_type} mutation was chosen. Be specific but brief.]
+
+Example: "Reduces KNN neighbor count from 10 to 6 and adds early termination when cluster reaches target size, chosen to improve efficiency while maintaining spatial coherence."
+
+## CODE
+```java
+[Complete Java implementation]
+```
+
+Return your response exactly in this format with both IDEA and CODE sections."""
 
         return prompt
 
