@@ -1,0 +1,2 @@
+# Prevent instantiated environment files from being uploaded
+.env

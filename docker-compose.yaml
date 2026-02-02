@@ -1,0 +1,46 @@
+services:
+  litellm:
+    image: docker.litellm.ai/berriai/litellm:main-latest
+    container_name: litellm
+    networks:
+      - evocode-network
+    ports:
+      - "4000:4000"
+    environment:
+      MODELARTS_API_KEY: ${MODELARTS_API_KEY}
+      TARGET_MODEL_NAME: ${MODELARTS_MODEL}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL}
+      CUSTOM_LLM_PROVIDER: ${CUSTOM_LLM_PROVIDER}
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml"]
+
+  claude-code:
+    image: claude-code-evo:latest
+    container_name: evo-code
+    networks:
+      - evocode-network
+    stdin_open: true
+    tty: true
+    environment:
+      ANTHROPIC_BASE_URL: "http://litellm:4000"
+      ANTHROPIC_AUTH_TOKEN: ${MODELARTS_API_KEY}
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: 1
+      COLORTERM: truecolor
+      TARGET_MODEL_NAME: ${MODELARTS_MODEL}
+      MODELARTS_API_KEY: ${MODELARTS_API_KEY}
+      MODELARTS_MODEL: ${MODELARTS_MODEL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      PYTHONPATH: /app/evolver/src
+    volumes:
+      # For now, we will just use the raw source; but we should package and install EvoCode in the long-term
+      - ./:/app
+      - ./.claude:/app/.claude
+    command: claude
+    depends_on:
+      - litellm
+
+networks:
+  evocode-network:
+    driver: bridge
