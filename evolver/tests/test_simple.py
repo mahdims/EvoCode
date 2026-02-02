@@ -1,6 +1,7 @@
 """Minimal test to verify LLM-guided evolution works"""
 import sys
 from pathlib import Path
+from loguru import logger
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -14,12 +15,12 @@ for d in [project_root / "candidates", project_root / "temp"]:
     if d.exists():
         shutil.rmtree(d)
 
-print("="*80)
-print("MINIMAL LLM EVOLUTION TEST")
-print("="*80)
-print("Config: 2 candidates, 1 seed, no generations")
-print("Goal: Verify LLM seed generation works")
-print("="*80)
+logger.debug("="*80)
+logger.debug("MINIMAL LLM EVOLUTION TEST")
+logger.debug("="*80)
+logger.debug("Config: 2 candidates, 1 seed, no generations")
+logger.debug("Goal: Verify LLM seed generation works")
+logger.debug("="*80)
 
 # Minimal config - just test seed generation
 evolution = EvolutionLoop(
@@ -30,19 +31,19 @@ evolution = EvolutionLoop(
     use_vrpagent=True
 )
 
-print("\n[TEST] Generating 1 LLM seed...")
+logger.debug("\n[TEST] Generating 1 LLM seed...")
 evolution.initialize_population(num_seeds=1)
 
-print("\n" + "="*80)
-print("TEST RESULTS")
-print("="*80)
-print(f"Population size: {len(evolution.population)}")
+logger.debug("\n" + "="*80)
+logger.debug("TEST RESULTS")
+logger.debug("="*80)
+logger.debug(f"Population size: {len(evolution.population)}")
 if evolution.population:
     seed = evolution.population[0]
-    print(f"Seed ID: {seed['candidate_id']}")
-    print(f"Seed fitness: {seed['fitness']:.6f}")
-    print(f"Code length: {seed['code_length']} lines")
-    print("\nSUCCESS: LLM seed generation works!")
+    logger.debug(f"Seed ID: {seed['candidate_id']}")
+    logger.debug(f"Seed fitness: {seed['fitness']:.6f}")
+    logger.debug(f"Code length: {seed['code_length']} lines")
+    logger.debug("\nSUCCESS: LLM seed generation works!")
 else:
-    print("FAILED: No seeds generated")
-print("="*80)
+    logger.debug("FAILED: No seeds generated")
+logger.debug("="*80)

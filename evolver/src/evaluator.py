@@ -15,6 +15,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from loguru import logger
 
 
 class Evaluator:
@@ -63,7 +64,7 @@ class Evaluator:
                     if line.startswith("Cost"):
                         return float(line.split()[1])
         except Exception as e:
-            print(f"[PARSE ERROR] Failed to parse {sol_file}: {e}")
+            logger.error(f"[PARSE ERROR] Failed to parse {sol_file}: {e}")
 
         return float('inf')
 
@@ -106,7 +107,7 @@ class Evaluator:
         # Look for instances and pick the smallest one by file size (proxy for instance size)
         vrp_files = list(self.data_dir.glob("*.vrp"))
         if not vrp_files:
-            print(f"[SMOKE TEST ERROR] No .vrp files found in {self.data_dir}")
+            logger.error(f"[SMOKE TEST ERROR] No .vrp files found in {self.data_dir}")
             return {
                 "success": False,
                 "runtime": 0.0,
@@ -116,7 +117,7 @@ class Evaluator:
 
         # Pick smallest instance by file size (smaller files = fewer nodes)
         instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
-        print(f"[SMOKE TEST] Using instance: {instance_file.name}")
+        logger.debug(f"[SMOKE TEST] Using instance: {instance_file.name}")
 
         # Use unique output file per candidate to avoid conflicts in parallel execution
         output_sol = self.temp_dir / f"smoke_test_{class_name}.sol"
@@ -154,7 +155,7 @@ class Evaluator:
             }
 
         except subprocess.TimeoutExpired:
-            print(f"[SMOKE TEST TIMEOUT] {class_name} exceeded {timeout}s")
+            logger.error(f"[SMOKE TEST TIMEOUT] {class_name} exceeded {timeout}s")
             return {
                 "success": False,
                 "runtime": timeout,
@@ -163,7 +164,7 @@ class Evaluator:
             }
 
         except Exception as e:
-            print(f"[SMOKE TEST ERROR] {class_name}: {e}")
+            logger.error(f"[SMOKE TEST ERROR] {class_name}: {e}")
             return {
                 "success": False,
                 "runtime": 0.0,
@@ -201,7 +202,7 @@ class Evaluator:
 
             # Check files exist
             if not instance_file.exists():
-                print(f"[EVAL ERROR] Instance not found: {instance_file}")
+                logger.error(f"[EVAL ERROR] Instance not found: {instance_file}")
                 results.append({
                     "instance": instance_name,
                     "success": False,
@@ -210,7 +211,7 @@ class Evaluator:
                 continue
 
             if not warmstart_file.exists():
-                print(f"[EVAL WARNING] Warmstart not found: {warmstart_file}")
+                logger.warning(f"[EVAL WARNING] Warmstart not found: {warmstart_file}")
                 warmstart_file = None
 
             # Parse initial cost
@@ -263,11 +264,11 @@ class Evaluator:
                     "exit_code": result.returncode
                 })
 
-                print(f"[EVAL] {instance_name}: {initial_cost:.1f} -> {final_cost:.1f} "
+                logger.debug(f"[EVAL] {instance_name}: {initial_cost:.1f} -> {final_cost:.1f} "
                       f"(improvement={improvement*100:.3f}%) in {runtime:.1f}s")
 
             except subprocess.TimeoutExpired:
-                print(f"[EVAL TIMEOUT] {instance_name} exceeded {timeout}s")
+                logger.error(f"[EVAL TIMEOUT] {instance_name} exceeded {timeout}s")
                 results.append({
                     "instance": instance_name,
                     "initial_cost": initial_cost,
@@ -279,7 +280,7 @@ class Evaluator:
                 })
 
             except Exception as e:
-                print(f"[EVAL ERROR] {instance_name}: {e}")
+                logger.error(f"[EVAL ERROR] {instance_name}: {e}")
                 results.append({
                     "instance": instance_name,
                     "initial_cost": initial_cost,
@@ -433,7 +434,7 @@ class Evaluator:
         if max_workers is None:
             max_workers = min(len(instances), 5)  # Cap at 5 to avoid overload
 
-        print(f"[PARALLEL EVAL] Evaluating {len(instances)} instances with {max_workers} workers")
+        logger.debug(f"[PARALLEL EVAL] Evaluating {len(instances)} instances with {max_workers} workers")
 
         results = []
 
@@ -457,14 +458,14 @@ class Evaluator:
 
                     # Log result
                     if result["success"]:
-                        print(f"[EVAL] {instance_name}: {result['initial_cost']:.1f} -> "
+                        logger.debug(f"[EVAL] {instance_name}: {result['initial_cost']:.1f} -> "
                               f"{result['final_cost']:.1f} (improvement={result['improvement']*100:.3f}%) "
                               f"in {result['runtime']:.1f}s")
                     else:
-                        print(f"[EVAL ERROR] {instance_name}: {result.get('error', 'Unknown error')}")
+                        logger.error(f"[EVAL ERROR] {instance_name}: {result.get('error', 'Unknown error')}")
 
                 except Exception as e:
-                    print(f"[EVAL EXCEPTION] {instance_name}: {e}")
+                    logger.error(f"[EVAL EXCEPTION] {instance_name}: {e}")
                     results.append({
                         "instance": instance_name,
                         "success": False,
@@ -512,8 +513,8 @@ class Evaluator:
 
         actual_candidate_workers = min(max_candidate_workers, len(candidates))
 
-        print(f"[2-LEVEL PARALLEL] Evaluating {len(candidates)} candidates × {len(instances)} instances")
-        print(f"[2-LEVEL PARALLEL] Workers: {actual_candidate_workers} candidates × {max_instance_workers} instances")
+        logger.debug(f"[2-LEVEL PARALLEL] Evaluating {len(candidates)} candidates × {len(instances)} instances")
+        logger.debug(f"[2-LEVEL PARALLEL] Workers: {actual_candidate_workers} candidates × {max_instance_workers} instances")
 
         results = [None] * len(candidates)
 
@@ -542,13 +543,13 @@ class Evaluator:
                     successful = [r for r in result if r.get("success", False)]
                     if successful:
                         avg_improvement = sum(r["improvement"] for r in successful) / len(successful)
-                        print(f"[2-LEVEL PARALLEL] Candidate {idx} ({candidate.get('candidate_id', 'unknown')}): "
+                        logger.debug(f"[2-LEVEL PARALLEL] Candidate {idx} ({candidate.get('candidate_id', 'unknown')}): "
                               f"{len(successful)}/{len(instances)} instances, avg_improvement={avg_improvement*100:.3f}%")
                     else:
-                        print(f"[2-LEVEL PARALLEL] Candidate {idx}: All instances failed")
+                        logger.debug(f"[2-LEVEL PARALLEL] Candidate {idx}: All instances failed")
 
                 except Exception as e:
-                    print(f"[2-LEVEL PARALLEL ERROR] Candidate {idx}: {e}")
+                    logger.debug(f"[2-LEVEL PARALLEL ERROR] Candidate {idx}: {e}")
                     results[idx] = [
                         {
                             "instance": inst,

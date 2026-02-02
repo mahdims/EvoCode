@@ -103,7 +103,7 @@ Example `config.json`:
 | `instance_workers` | "auto" | Parallel instances per candidate ("auto" = (cpu_count-1) / num_workers) |
 | `resume` | false | Resume from existing candidates |
 | `verbose` | true | Verbose output (false = reflections + best only) |
-| `user_insight` | "" | User guidance string (future use) |
+| `user_insight` | null | List of user insights to guide evolution (see [User Insight](#user-insight)) |
 
 ### Datasets
 
@@ -125,6 +125,39 @@ Worker 2: Generate → Compile → Smoke → Evaluate → (pick next task)
 - `instance_workers`: Parallel VRP instances per candidate evaluation
   - `"auto"`: Distributes cores fairly: `(cpu_count - 1) / num_workers`
   - Or set explicit number
+
+### User Insight
+
+Inject domain knowledge into the evolutionary process by providing a list of insight objects:
+
+```json
+{
+    "user_insight": [
+        {
+            "type": "initialize",
+            "idea": "Use demand-based clustering to remove high-demand nodes together"
+        },
+        {
+            "type": "mutate",
+            "idea": "Add adaptive threshold based on omega size",
+            "related_population": [0]
+        },
+        {
+            "type": "crossover",
+            "idea": "Combine KNN clustering from first parent with cost-based selection from second",
+            "related_population": [0, 1]
+        }
+    ]
+}
+```
+
+| Type | Description | `related_population` |
+|------|-------------|---------------------|
+| `initialize` | Create a new strategy from scratch based on the idea | Not used |
+| `mutate` | Modify an existing candidate guided by the idea | Single candidate ID |
+| `crossover` | Combine multiple candidates according to the idea | 2+ candidate IDs |
+
+User insights are processed at the start of evolution, before the main loop.
 
 ## Output
 

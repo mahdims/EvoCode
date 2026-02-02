@@ -8,7 +8,7 @@ Following the ReEvo framework:
 Adapted for VRP AILS Destroy Strategy Evolution
 """
 from __future__ import annotations
-
+from loguru import logger
 
 class ReflectionPrompts:
     """Manages short-term and long-term reflection prompts."""
@@ -445,7 +445,7 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("=== SHORT-TERM REFLECTION PROMPT EXAMPLE ===\n")
+    logger.debug("=== SHORT-TERM REFLECTION PROMPT EXAMPLE ===\n")
 
     example_better_code = """package EvoDestroy;
 import Solution.Node;
@@ -502,10 +502,10 @@ public class RandomRemoval implements DestroyStrategy {
         example_worse_results
     )
 
-    print(prompt)
-    print("\n" + "="*80 + "\n")
+    logger.debug(prompt)
+    logger.debug("\n" + "="*80 + "\n")
 
-    print("=== LONG-TERM REFLECTION PROMPT EXAMPLE ===\n")
+    logger.debug("=== LONG-TERM REFLECTION PROMPT EXAMPLE ===\n")
 
     example_short_term = [
         "Clustered removal using KNN outperforms random removal because it exploits spatial locality, allowing the repair phase to reconstruct routes more efficiently.",
@@ -527,4 +527,4 @@ public class RandomRemoval implements DestroyStrategy {
         generation=5
     )
 
-    print(prompt)
+    logger.debug(prompt)

@@ -13,7 +13,7 @@ Key additions from VRPAGENT:
 
 from typing import Optional, Dict, List, Any
 import random
-
+from loguru import logger
 
 class VRPAgentPrompts:
     """VRPAGENT-style prompts enhanced with ReEvo reflection."""
@@ -456,6 +456,212 @@ Return your response exactly in this format with both IDEA and CODE sections."""
     # Helper methods
 
     @staticmethod
+    def user_insight_generation(
+        insight_type: str,
+        idea: str,
+        related_candidates: Optional[List[Dict[str, Any]]] = None,
+        long_term_reflection: Optional[str] = None
+    ) -> str:
+        """
+        Generate strategy guided by user insight.
+
+        Supports three insight types:
+        - "initialize": Create a new strategy from scratch based on user's idea (no related candidates)
+        - "mutate": Modify a single existing strategy guided by user's idea (one related candidate)
+        - "crossover": Combine features from multiple candidates based on user's idea (2+ related candidates)
+
+        Args:
+            insight_type: One of "initialize", "mutate", "crossover"
+            idea: User's high-level idea/concept for the strategy
+            related_candidates: List of candidate dicts:
+                - None or empty for "initialize"
+                - Single candidate for "mutate"
+                - Multiple candidates for "crossover"
+            long_term_reflection: Optional accumulated evolutionary knowledge
+
+        Returns:
+            Prompt for user insight-guided generation
+        """
+        valid_types = ["initialize", "mutate", "crossover"]
+        if insight_type not in valid_types:
+            raise ValueError(f"Invalid insight type: {insight_type}. Must be one of {valid_types}")
+
+        # Validate related_candidates based on insight_type
+        if insight_type == "initialize":
+            if related_candidates:
+                logger.warning("[WARNING] user_insight: 'initialize' type should not have related_candidates, ignoring them")
+            related_candidates = None
+        elif insight_type == "mutate":
+            if not related_candidates or len(related_candidates) == 0:
+                raise ValueError("'mutate' insight type requires exactly one related candidate")
+            if len(related_candidates) > 1:
+                logger.warning(f"[WARNING] user_insight: 'mutate' type expects one candidate, using first of {len(related_candidates)}")
+            related_candidates = [related_candidates[0]]  # Take only the first
+        elif insight_type == "crossover":
+            if not related_candidates or len(related_candidates) < 2:
+                raise ValueError("'crossover' insight type requires at least two related candidates")
+
+        # Format related candidates section
+        related_section = ""
+        if related_candidates:
+            if insight_type == "mutate":
+                related_section = "\n=== BASE CANDIDATE TO MODIFY ===\n"
+            else:
+                related_section = "\n=== PARENT CANDIDATES FOR CROSSOVER ===\n"
+
+            for i, candidate in enumerate(related_candidates):
+                cand_id = candidate.get("candidate_id", i)
+                cand_idea = candidate.get("idea", "No idea available")
+                cand_fitness = candidate.get("fitness", 0)
+                cand_code = candidate.get("code", "")
+
+                # Get improvement results
+                eval_results = candidate.get("eval_results", [])
+                improvements = [r.get("improvement", 0.0) for r in eval_results if r.get("success", True)]
+                avg_improvement = sum(improvements) / len(improvements) if improvements else 0.0
+
+                label = "Base Candidate" if insight_type == "mutate" else f"Parent {i + 1} (Candidate {cand_id})"
+                related_section += f"""
+--- {label} ---
+IDEA: {cand_idea}
+FITNESS: {cand_fitness * 100:.4f}% (avg improvement: {avg_improvement * 100:.3f}%)
+
+```java
+{cand_code}
+```
+"""
+
+        # Type-specific instructions
+        if insight_type == "initialize":
+            type_instruction = f"""
+=== TASK: INITIALIZE NEW STRATEGY FROM USER INSIGHT ===
+
+You are creating a BRAND NEW destroy strategy based on the user's idea.
+
+**USER'S IDEA:**
+{idea}
+
+**Your task:**
+1. Implement the user's concept as a complete, working destroy strategy
+2. The implementation should faithfully realize the user's vision
+3. Start from scratch - this is a new strategy, not based on existing code
+4. Ensure the strategy is novel and distinct
+
+**Guidelines:**
+- Focus on implementing the user's idea accurately
+- Use VRP destroy heuristics knowledge to fill in implementation details
+- The result should be a complete, working strategy
+"""
+        elif insight_type == "mutate":
+            type_instruction = f"""
+=== TASK: MUTATE STRATEGY GUIDED BY USER INSIGHT ===
+
+You are modifying an existing strategy based on the user's guidance.
+
+**USER'S MODIFICATION IDEA:**
+{idea}
+
+**Your task:**
+1. Apply the user's modification idea to the base strategy shown below
+2. Keep the successful elements of the base strategy
+3. Integrate the user's suggestion to improve or change behavior
+4. The result should be a coherent strategy (not just patches)
+
+**Guidelines:**
+- The user's idea takes priority over automatic mutation decisions
+- Preserve working patterns from the base unless the user wants them changed
+- Make sure the modification achieves what the user intended
+"""
+        else:  # crossover
+            type_instruction = f"""
+=== TASK: CROSSOVER STRATEGIES GUIDED BY USER INSIGHT ===
+
+You are combining multiple strategies based on the user's vision.
+
+**USER'S COMBINATION IDEA:**
+{idea}
+
+**Your task:**
+1. Combine features from the parent candidates according to the user's idea
+2. The user's idea describes which features to take from each parent
+   or how to blend their approaches
+3. Create a coherent offspring that realizes the user's vision
+4. The result should be more than sum of parts - a unified strategy
+
+**Guidelines:**
+- Follow the user's guidance on what to combine
+- Ensure logical coherence in the combined strategy
+- If the user specifies percentages or priorities, follow them
+- All parent candidates can contribute to the offspring
+"""
+
+        reflection_section = ""
+        if long_term_reflection:
+            reflection_section = f"""
+=== ACCUMULATED EVOLUTIONARY KNOWLEDGE ===
+{long_term_reflection}
+
+**Use this knowledge to:**
+- Validate the user's idea against proven patterns
+- Implement using best practices from evolution history
+- Avoid known anti-patterns while implementing
+"""
+
+        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
+
+{type_instruction}
+{related_section}
+{reflection_section}
+
+=== CONSTRAINTS - MUST FOLLOW ===
+1. Package: EvoDestroy
+2. Implements: DestroyStrategy interface
+3. Method signature:
+   Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
+                              Node[] nodes, Instance instance, Random rand)
+4. Return array size <= numToRemove
+5. Only select nodes where: node.nodeBelong == true AND node.name != 0
+6. NO DUPLICATES: Use HashSet to track selected node IDs
+7. Use provided Random instance (rand), do not create new Random()
+8. No file I/O, no external libraries, no System.out
+9. Single class only
+10. Deterministic for same seed
+11. **Keep code CONCISE** - favor shorter, clearer code
+
+=== AVAILABLE DATA STRUCTURES ===
+- routes[i]: Route object with first (depot), totalDemand, fRoute (cost)
+- nodes[i]: Node object with name (ID), demand, knn[] (nearest neighbors), route (parent)
+- instance.dist(i, j): Distance between nodes i and j
+- node.knn[k]: k-th nearest neighbor ID
+- route.first.next: First customer in route
+- node.next, node.prev: Linked list pointers
+
+=== REQUIRED IMPORTS ===
+import Solution.Node;
+import Solution.Route;
+import Data.Instance;
+import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
+
+=== OUTPUT FORMAT ===
+You MUST provide your response in TWO sections:
+
+## IDEA
+[1-2 concise sentences summarizing the implemented strategy and how it realizes the user's vision]
+
+## CODE
+```java
+[Complete Java implementation]
+```
+
+Return your response exactly in this format with both IDEA and CODE sections."""
+
+        return prompt
+
+    @staticmethod
     def _extract_class_name(code: str) -> str:
         """Extract class name from Java code."""
         import re
@@ -487,9 +693,9 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 
 # Example usage
 if __name__ == "__main__":
-    print("="*80)
-    print("VRPAGENT Prompts + ReEvo Reflection")
-    print("="*80)
+    logger.debug("="*80)
+    logger.debug("VRPAGENT Prompts + ReEvo Reflection")
+    logger.debug("="*80)
 
     example_elite_code = """package EvoDestroy;
 import Solution.Node;
@@ -539,24 +745,24 @@ public class RandomRemoval implements DestroyStrategy {
 
     reflection = "KNN clustering maintains spatial locality better than random selection."
 
-    print("\n=== BIASED CROSSOVER PROMPT ===\n")
+    logger.debug("\n=== BIASED CROSSOVER PROMPT ===\n")
     prompt = VRPAgentPrompts.biased_crossover(
         example_elite_code, elite_results,
         example_non_elite_code, non_elite_results,
         reflection, elite_bias=0.75
     )
-    print(prompt[:800] + "...\n")
+    logger.debug(prompt[:800] + "...\n")
 
-    print("="*80)
-    print("\n=== ABLATION MUTATION PROMPT ===\n")
+    logger.debug("="*80)
+    logger.debug("\n=== ABLATION MUTATION PROMPT ===\n")
     prompt = VRPAgentPrompts.typed_mutation(
         example_elite_code, elite_results,
         "ablation", reflection
     )
-    print(prompt[:800] + "...\n")
+    logger.debug(prompt[:800] + "...\n")
 
-    print("="*80)
-    print("\n=== CODE LENGTH PENALTY ===\n")
+    logger.debug("="*80)
+    logger.debug("\n=== CODE LENGTH PENALTY ===\n")
     penalty = VRPAgentPrompts.calculate_code_length_penalty(example_elite_code)
-    print(f"Code has {len(example_elite_code.split(chr(10)))} lines")
-    print(f"Penalty: {penalty:.6f}")
+    logger.debug(f"Code has {len(example_elite_code.split(chr(10)))} lines")
+    logger.debug(f"Penalty: {penalty:.6f}")

@@ -14,6 +14,7 @@ import json
 import random
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
+from loguru import logger
 
 from candidate_manager import CandidateManager
 from evaluator import Evaluator
@@ -35,7 +36,7 @@ class EvolutionLoop:
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
                  debug: bool = True,
-                 user_insight: str = "",
+                 user_insight: Optional[List[Dict[str, Any]]] = None,
                  num_workers: int = 2,
                  instance_workers: str | int = "auto",
                  max_parallel_evals: int = None):
@@ -53,7 +54,10 @@ class EvolutionLoop:
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
             debug: If True, show all output. If False, only show reflections and best candidate per generation
-            user_insight: User-provided insight string for guiding evolution (reserved for future use)
+            user_insight: List of user-provided insights for guiding evolution. Each insight is a dict with:
+                - type: "initialize" | "mutate" | "crossover"
+                - idea: str describing the user's concept
+                - related_population: list of candidate_ids (None for initialize, one for mutate, 2+ for crossover)
             num_workers: Concurrent candidate pipelines (default: 2)
             instance_workers: Parallel instance evaluations per candidate (default: "auto" = cpu_count // num_workers)
             max_parallel_evals: Maximum total parallel workers. If set, intelligently divides budget:
@@ -143,21 +147,6 @@ class EvolutionLoop:
         else:
             return min(int(self.instance_workers), len(self.target_instances))
 
-    def _log(self, message: str, level: str = "debug") -> None:
-        """
-        Log a message respecting debug flag.
-
-        Args:
-            message: Message to log
-            level: 'debug' (only if debug=True) or 'info' (always shown)
-        """
-        if level == "info" or self.debug:
-            print(message)
-
-    def _log_reflection(self, message: str) -> None:
-        """Log reflection-related messages (always shown)."""
-        print(message)
-
     def resume_from_candidates(self) -> bool:
         """
         Resume evolution from existing candidates folder.
@@ -168,7 +157,7 @@ class EvolutionLoop:
         Returns:
             True if successfully resumed, False if no valid candidates found
         """
-        self._log("[RESUME] Scanning candidates folder for existing population...", "info")
+        logger.info("[RESUME] Scanning candidates folder for existing population...")
 
         candidates = []
         max_gen = 0
@@ -186,14 +175,14 @@ class EvolutionLoop:
 
                 # Check if evaluation data exists
                 if "evaluation" not in metadata:
-                    self._log(f"[RESUME] Skipping {candidate_dir.name}: no evaluation data", "debug")
+                    logger.debug(f"[RESUME] Skipping {candidate_dir.name}: no evaluation data")
                     continue
 
                 # Load the source code
                 strategy_class = metadata.get("strategy_class", "Unknown")
                 code_file = candidate_dir / "src" / "EvoDestroy" / f"{strategy_class}.java"
                 if not code_file.exists():
-                    self._log(f"[RESUME] Skipping {candidate_dir.name}: source file not found", "debug")
+                    logger.debug(f"[RESUME] Skipping {candidate_dir.name}: source file not found")
                     continue
 
                 with open(code_file) as f:
@@ -219,11 +208,11 @@ class EvolutionLoop:
                 max_id = max(max_id, candidate["candidate_id"])
 
             except Exception as e:
-                self._log(f"[RESUME] Error loading {candidate_dir.name}: {e}", "debug")
+                logger.debug(f"[RESUME] Error loading {candidate_dir.name}: {e}")
                 continue
 
         if not candidates:
-            self._log("[RESUME] No valid candidates found to resume from", "info")
+            logger.info("[RESUME] No valid candidates found to resume from")
             return False
 
         # Sort by fitness and keep top population_size
@@ -232,9 +221,9 @@ class EvolutionLoop:
         self.generation = max_gen
         self.candidate_counter = max_id + 1
 
-        self._log(f"[RESUME] Loaded {len(self.population)} candidates from {len(candidates)} total", "info")
-        self._log(f"[RESUME] Resuming from generation {self.generation}, next candidate ID: {self.candidate_counter}", "info")
-        self._log(f"[RESUME] Best fitness: {self.population[0]['fitness']*100:.4f}%", "info")
+        logger.info(f"[RESUME] Loaded {len(self.population)} candidates from {len(candidates)} total")
+        logger.info(f"[RESUME] Resuming from generation {self.generation}, next candidate ID: {self.candidate_counter}")
+        logger.info(f"[RESUME] Best fitness: {self.population[0]['fitness']*100:.4f}%")
 
         # Rebuild idea history from loaded candidates
         if self.population:
@@ -261,7 +250,7 @@ class EvolutionLoop:
         Args:
             num_seeds: Number of seed strategies to generate
         """
-        self._log(f"[INIT] Generating {num_seeds} seed strategies...")
+        logger.debug(f"[INIT] Generating {num_seeds} seed strategies...")
 
         for i in range(num_seeds):
             idea, strategy_code = self.llm.generate_initial_seed(i)
@@ -276,7 +265,7 @@ class EvolutionLoop:
             )
 
             if not result:
-                self._log(f"[INIT] Seed {i} failed to compile, skipping")
+                logger.debug(f"[INIT] Seed {i} failed to compile, skipping")
                 continue
 
             # Smoke test
@@ -286,7 +275,7 @@ class EvolutionLoop:
             )
 
             if not smoke["success"]:
-                self._log(f"[INIT] Seed {i} failed smoke test, skipping")
+                logger.debug(f"[INIT] Seed {i} failed smoke test, skipping")
                 continue
 
             # Evaluate (parallel across instances)
@@ -323,9 +312,8 @@ class EvolutionLoop:
                 "mutation_type": "initial_seed"
             })
 
-            self._log(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
-            if self.debug:
-                self._log(f"[INIT] Idea: {idea[:100]}...")
+            logger.debug(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
+            logger.debug(f"[INIT] Idea: {idea[:100]}...")
 
             # Record strategy in history for interpretability reporting
             if idea and fitness is not None:
@@ -336,10 +324,9 @@ class EvolutionLoop:
                     candidate_id=self.candidate_counter,
                     mutation_type="initial_seed"
                 )
-
             self.candidate_counter += 1
 
-        self._log(f"[INIT] Population size: {len(self.population)}")
+        logger.debug(f"[INIT] Population size: {len(self.population)}")
 
     def select_parents(self, tournament_size: int = 3) -> Tuple[Dict, Dict]:
         """
@@ -420,24 +407,24 @@ class EvolutionLoop:
             # CHECK DIVERSITY
             new_idea = offspring.get("idea")
             if new_idea is None:
-                self._log("[DIVERSITY] No idea in offspring, skipping diversity check")
+                logger.debug("[DIVERSITY] No idea in offspring, skipping diversity check")
                 return offspring
 
             population_ideas = [c.get("idea") for c in self.population if c.get("idea") is not None]
 
             if self.diversity_checker.is_diverse(new_idea, population_ideas):
-                self._log(f"[DIVERSITY] Offspring is diverse (attempt {attempt+1})")
+                logger.debug(f"[DIVERSITY] Offspring is diverse (attempt {attempt+1})")
                 return offspring
             else:
                 similar = self.diversity_checker.find_most_similar(new_idea, population_ideas)
                 if similar:
                     idx, score = similar
                     similar_id = self.population[idx]["candidate_id"]
-                    self._log(f"[DIVERSITY] Offspring too similar to candidate {similar_id} "
+                    logger.debug(f"[DIVERSITY] Offspring too similar to candidate {similar_id} "
                             f"(similarity={score:.2f}), retrying... (attempt {attempt+1})")
                 continue
 
-        self._log(f"[DIVERSITY] Failed to generate diverse offspring after {max_diversity_attempts} attempts")
+        logger.debug(f"[DIVERSITY] Failed to generate diverse offspring after {max_diversity_attempts} attempts")
         return None
 
     def _crossover_with_short_term_reflection(self) -> Optional[Dict[str, Any]]:
@@ -452,11 +439,11 @@ class EvolutionLoop:
         # Select parents
         better_parent, worse_parent = self.select_parents()
 
-        self._log(f"[CROSSOVER] Parents: {better_parent['candidate_id']} (fit={better_parent['fitness']*100:.4f}%) "
+        logger.debug(f"[CROSSOVER] Parents: {better_parent['candidate_id']} (fit={better_parent['fitness']*100:.4f}%) "
               f"x {worse_parent['candidate_id']} (fit={worse_parent['fitness']*100:.4f}%)")
 
         # Generate short-term reflection
-        self._log(f"[REFLECTION] Generating short-term reflection...")
+        logger.debug(f"[REFLECTION] Generating short-term reflection...")
         short_term_reflection = self.llm.reflect_short_term(
             better_code=better_parent["code"],
             better_results=better_parent["eval_results"],
@@ -466,7 +453,7 @@ class EvolutionLoop:
 
         # Store for long-term accumulation
         self.short_term_reflections.append(short_term_reflection)
-        self._log_reflection(f"[REFLECTION] Short-term insight: {short_term_reflection[:200]}...")
+        logger.success(f"[REFLECTION] Short-term insight: {short_term_reflection[:200]}...")
 
         # Get parent ideas for context
         parent1_idea = better_parent.get("idea")
@@ -492,6 +479,139 @@ class EvolutionLoop:
             mutation_type="crossover"
         )
 
+    def _generate_with_user_insight(self) -> List[Dict[str, Any]]:
+        """
+        Generate offspring using user-provided insights.
+
+        The user_insight should be a list of insight dicts, each with keys:
+        - type: "initialize", "mutate", or "crossover"
+        - idea: str describing the user's concept
+        - related_population: list of candidate_ids (ignored for initialize,
+          single for mutate, 2+ for crossover)
+
+        This allows multiple operations in one call:
+        - Initialize multiple new directions
+        - Mutate different candidates with different ideas
+        - Crossover between specific candidate groups
+
+        Returns:
+            List of new candidate dicts (may be empty if all generations failed)
+        """
+        if not self.user_insight:
+            self._log("[USER_INSIGHT] No user insight provided")
+            return []
+
+        # Parse user_insight if it's a string (JSON)
+        if isinstance(self.user_insight, str):
+            try:
+                insights = json.loads(self.user_insight)
+            except json.JSONDecodeError as e:
+                self._log(f"[USER_INSIGHT] Failed to parse user_insight as JSON: {e}")
+                return []
+        else:
+            insights = self.user_insight
+
+        # Ensure insights is a list
+        if not isinstance(insights, list):
+            self._log("[USER_INSIGHT] user_insight should be a list of insight dicts")
+            return []
+
+        if not insights:
+            self._log("[USER_INSIGHT] Empty user_insight list")
+            return []
+
+        self._log(f"[USER_INSIGHT] Processing {len(insights)} user insights")
+
+        # Build candidate lookup from population
+        id_to_candidate = {c["candidate_id"]: c for c in self.population}
+
+        offspring_list = []
+        for i, insight in enumerate(insights):
+            self._log(f"\n[USER_INSIGHT] Processing insight {i + 1}/{len(insights)}")
+
+            # Validate required fields
+            insight_type = insight.get("type")
+            idea = insight.get("idea")
+
+            if not insight_type:
+                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'type' field, skipping")
+                continue
+            if not idea:
+                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'idea' field, skipping")
+                continue
+
+            valid_types = ["initialize", "mutate", "crossover"]
+            if insight_type not in valid_types:
+                self._log(f"[USER_INSIGHT] Insight {i}: Invalid type '{insight_type}', skipping")
+                continue
+
+            # Get related population candidate IDs
+            related_ids = insight.get("related_population", [])
+
+            # Resolve related candidates from population
+            related_candidates = []
+            if related_ids:
+                for cid in related_ids:
+                    if cid in id_to_candidate:
+                        related_candidates.append(id_to_candidate[cid])
+                    else:
+                        self._log(f"[USER_INSIGHT] Warning: candidate_id {cid} not found in population")
+
+            # Validate related_candidates based on type
+            if insight_type == "initialize":
+                if related_candidates:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'initialize' type ignores related_population")
+                related_candidates = None
+            elif insight_type == "mutate":
+                if not related_candidates:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' requires one candidate, skipping")
+                    continue
+                if len(related_candidates) > 1:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' expects one candidate, using first")
+                related_candidates = [related_candidates[0]]
+            elif insight_type == "crossover":
+                if len(related_candidates) < 2:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'crossover' requires 2+ candidates, skipping")
+                    continue
+
+            self._log(f"[USER_INSIGHT] Insight {i}: type='{insight_type}', idea='{idea[:50]}...'")
+            if related_candidates:
+                self._log(f"[USER_INSIGHT] Insight {i}: Related candidates: {[c['candidate_id'] for c in related_candidates]}")
+
+            # Generate using LLM with user insight
+            try:
+                offspring_idea, offspring_code = self.llm.generate_with_user_insight(
+                    insight_type=insight_type,
+                    idea=idea,
+                    related_candidates=related_candidates,
+                    long_term_reflection=self.long_term_reflection
+                )
+
+                # Determine parent_id for tracking
+                parent_id = None
+                if related_candidates:
+                    parent_id = related_candidates[0]["candidate_id"]
+
+                offspring = self._compile_and_evaluate_offspring(
+                    offspring_code,
+                    offspring_idea,
+                    parent_id=parent_id,
+                    mutation_type=f"user_insight_{insight_type}"
+                )
+
+                if offspring:
+                    offspring_list.append(offspring)
+                    self._log(f"[USER_INSIGHT] Insight {i}: Successfully generated candidate {offspring['candidate_id']}")
+                else:
+                    self._log(f"[USER_INSIGHT] Insight {i}: Failed to compile/evaluate offspring")
+
+            except Exception as e:
+                self._log(f"[USER_INSIGHT] Insight {i}: Error during generation: {e}")
+                continue
+
+        self._log(f"\n[USER_INSIGHT] Generated {len(offspring_list)} offspring from {len(insights)} insights")
+        return offspring_list
+
     def _mutate_with_long_term_reflection(self) -> Optional[Dict[str, Any]]:
         """
         Elitist mutation with long-term reflection guidance.
@@ -504,7 +624,7 @@ class EvolutionLoop:
         # Select elite parent
         elite_parent = max(self.population, key=lambda x: x["fitness"])
 
-        self._log(f"[MUTATION] Elite parent: {elite_parent['candidate_id']} (fit={elite_parent['fitness']*100:.4f}%)")
+        logger.debug(f"[MUTATION] Elite parent: {elite_parent['candidate_id']} (fit={elite_parent['fitness']*100:.4f}%)")
 
         # Select mutation type (VRPAGENT)
         if self.use_vrpagent:
@@ -514,7 +634,7 @@ class EvolutionLoop:
                 generation=self.generation,
                 long_term_reflection=self.long_term_reflection
             )
-            self._log(f"[MUTATION] Selected type: {mutation_type}")
+            logger.debug(f"[MUTATION] Selected type: {mutation_type}")
         else:
             mutation_type = None
 
@@ -556,7 +676,7 @@ class EvolutionLoop:
         )
 
         if not result:
-            self._log(f"[OFFSPRING] Compilation failed")
+            logger.debug(f"[OFFSPRING] Compilation failed")
             return None
 
         # Smoke test
@@ -566,7 +686,7 @@ class EvolutionLoop:
         )
 
         if not smoke["success"]:
-            self._log(f"[OFFSPRING] Smoke test failed")
+            logger.debug(f"[OFFSPRING] Smoke test failed")
             return None
 
         # Evaluate (parallel across instances)
@@ -603,10 +723,10 @@ class EvolutionLoop:
             "mutation_type": mutation_type
         }
 
-        self._log(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness*100:.4f}%")
+        logger.debug(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness*100:.4f}%")
         if offspring_idea:
             idea_preview = offspring_idea[:100] + "..." if len(offspring_idea) > 100 else offspring_idea
-            self._log(f"[OFFSPRING] Idea: {idea_preview}", level="debug")
+            logger.debug(f"[OFFSPRING] Idea: {idea_preview}")
 
         # Record strategy in history for interpretability reporting
         if offspring_idea and fitness is not None:
@@ -617,7 +737,6 @@ class EvolutionLoop:
                 candidate_id=self.candidate_counter,
                 mutation_type=mutation_type
             )
-
         self.candidate_counter += 1
 
         return offspring
@@ -629,11 +748,11 @@ class EvolutionLoop:
         Following ReEvo: Distill accumulated experiences into concise knowledge base.
         """
         if not self.short_term_reflections:
-            self._log(f"[REFLECTION] No short-term reflections to synthesize yet")
+            logger.debug(f"[REFLECTION] No short-term reflections to synthesize yet")
             return
 
-        self._log(f"[REFLECTION] Updating long-term knowledge (gen={self.generation})...")
-        self._log(f"[REFLECTION] Synthesizing {len(self.short_term_reflections)} recent insights...")
+        logger.debug(f"[REFLECTION] Updating long-term knowledge (gen={self.generation})...")
+        logger.debug(f"[REFLECTION] Synthesizing {len(self.short_term_reflections)} recent insights...")
 
         self.long_term_reflection = self.llm.reflect_long_term(
             recent_short_term_reflections=self.short_term_reflections,
@@ -641,8 +760,8 @@ class EvolutionLoop:
             generation=self.generation
         )
 
-        self._log_reflection(f"[REFLECTION] Long-term knowledge updated:")
-        self._log_reflection(self.long_term_reflection[:400] + "...")
+        # Display formatted reflection
+        self._display_long_term_reflection()
 
         # Clear short-term buffer (already distilled into long-term)
         self.short_term_reflections = []
@@ -659,9 +778,9 @@ class EvolutionLoop:
         # Keep top population_size
         self.population = self.population[:self.population_size]
 
-        self._log(f"[SELECTION] Population after selection: {len(self.population)} candidates")
-        self._log(f"[SELECTION] Top fitness: {self.population[0]['fitness']*100:.4f}%")
-        self._log(f"[SELECTION] Worst fitness: {self.population[-1]['fitness']*100:.4f}%")
+        logger.debug(f"[SELECTION] Population after selection: {len(self.population)} candidates")
+        logger.debug(f"[SELECTION] Top fitness: {self.population[0]['fitness']*100:.4f}%")
+        logger.debug(f"[SELECTION] Worst fitness: {self.population[-1]['fitness']*100:.4f}%")
 
     def evolve(self, num_generations: int = 10, reflection_frequency: int = 3) -> None:
         """
@@ -671,16 +790,29 @@ class EvolutionLoop:
             num_generations: Number of generations to evolve
             reflection_frequency: How often to update long-term reflection
         """
-        self._log(f"\n{'='*80}", "info")
-        self._log(f"STARTING EVOLUTION: {num_generations} generations", "info")
-        self._log(f"MODE: Work-stealing pipeline (workers={self.num_workers}, instance_workers={self._get_instance_workers()})", "info")
-        self._log(f"{'='*80}\n", "info")
+        logger.info(f"{'='*80}")
+        logger.info(f"STARTING EVOLUTION: {num_generations} generations")
+        logger.debug(f"MODE: Work-stealing pipeline (workers={self.num_workers}, instance_workers={self._get_instance_workers()})")
+        logger.info(f"{'='*80}")
+
+        # Process user insights before main evolution loop
+        if self.user_insight:
+            self._log(f"\n{'='*80}", "info")
+            self._log(f"PROCESSING USER INSIGHTS", "info")
+            self._log(f"{'='*80}", "info")
+            user_offspring = self._generate_with_user_insight()
+            for offspring in user_offspring:
+                self.population.append(offspring)
+            self._log(f"[USER_INSIGHT] Added {len(user_offspring)} candidates to population", "info")
+            # Apply survival selection if population exceeds limit
+            if len(self.population) > self.population_size:
+                self.survival_selection()
 
         for gen in range(num_generations):
             self.generation = gen + 1
-            self._log(f"\n{'='*80}")
-            self._log(f"GENERATION {self.generation}")
-            self._log(f"{'='*80}")
+            logger.info(f"{'='*80}")
+            logger.info(f"GENERATION {self.generation}")
+            logger.info(f"{'='*80}")
 
             # Generate offspring using work-stealing pipeline
             num_offspring = self.population_size - self.elite_size
@@ -689,7 +821,7 @@ class EvolutionLoop:
                 self.population.append(offspring)
             offspring_count = len(offspring_list)
 
-            self._log(f"\n[GEN {self.generation}] Generated {offspring_count} valid offspring")
+            logger.debug(f"[GEN {self.generation}] Generated {offspring_count} valid offspring")
 
             # Survival selection
             self.survival_selection()
@@ -702,13 +834,8 @@ class EvolutionLoop:
             if self.generation % reflection_frequency == 0:
                 self.update_long_term_reflection()
 
-            # Report best (always shown)
-            best = max(self.population, key=lambda x: x["fitness"])
-            self._log(f"\n[GEN {self.generation}] BEST: ID={best['candidate_id']}, fitness={best['fitness']*100:.4f}%", "info")
-
-        self._log(f"\n{'='*80}", "info")
-        self._log(f"EVOLUTION COMPLETE", "info")
-        self._log(f"{'='*80}\n", "info")
+            # Report iteration statistics (always shown)
+            self._report_iteration_statistics()
 
         # Final statistics
         self.print_final_statistics()
@@ -765,7 +892,7 @@ class EvolutionLoop:
 
                     if use_crossover and len(self.population) >= 2:
                         better_parent, worse_parent = self.select_parents()
-                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
+                        logger.debug(f"[Worker{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
 
                         short_term_reflection = self.llm.reflect_short_term(
                             better_code=better_parent["code"],
@@ -795,7 +922,7 @@ class EvolutionLoop:
                         mutation_type = "crossover"
                     else:
                         elite_parent = max(self.population, key=lambda x: x["fitness"])
-                        print(f"[W{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
+                        logger.debug(f"[Worker{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
 
                         mutation_type = None
                         if self.use_vrpagent:
@@ -832,10 +959,10 @@ class EvolutionLoop:
                     )
 
                     if not compile_result:
-                        print(f"[W{worker_id}] Candidate {candidate_id} failed to compile")
+                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed to compile")
                         continue
 
-                    print(f"[W{worker_id}] Candidate {candidate_id} compiled")
+                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} compiled")
 
                     # === Stage 3: Smoke Test ===
                     smoke_result = self.evaluator.smoke_test(
@@ -844,10 +971,10 @@ class EvolutionLoop:
                     )
 
                     if not smoke_result["success"]:
-                        print(f"[W{worker_id}] Candidate {candidate_id} failed smoke test")
+                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed smoke test")
                         continue
 
-                    print(f"[W{worker_id}] Candidate {candidate_id} passed smoke test")
+                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} passed smoke test")
 
                     # === Stage 4: Evaluate (instances in parallel) ===
                     eval_results = self.evaluator.evaluate_endgame_parallel(
@@ -885,17 +1012,17 @@ class EvolutionLoop:
                     with results_lock:
                         results.append(offspring)
 
-                    print(f"[W{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
+                    logger.info(f"[Worker{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
 
                 except Exception as e:
-                    print(f"[W{worker_id}] Candidate {candidate_id} failed with error: {e}")
+                    logger.error(f"[Worker{worker_id}] Candidate {candidate_id} failed with error: {e}")
 
                 finally:
                     task_queue.task_done()
 
         # === Start Workers ===
         actual_workers = min(self.num_workers, num_offspring)
-        print(f"\n[PIPELINE] Starting {actual_workers} workers for {num_offspring} offspring")
+        logger.debug(f"[PIPELINE] Starting {actual_workers} workers for {num_offspring} offspring")
 
         workers = [Thread(target=worker, args=(i,), daemon=True) for i in range(actual_workers)]
         for w in workers:
@@ -915,7 +1042,7 @@ class EvolutionLoop:
         # Update candidate counter
         self.candidate_counter = candidate_id_counter[0]
 
-        print(f"[PIPELINE] Complete: {len(results)}/{num_offspring} offspring evaluated")
+        logger.debug(f"[PIPELINE] Complete: {len(results)}/{num_offspring} offspring evaluated")
         return results
 
     def _calculate_fitness_with_penalty(self, code: str, base_fitness: float) -> float:
@@ -942,6 +1069,91 @@ class EvolutionLoop:
         penalized_fitness = base_fitness - penalty
 
         return penalized_fitness
+
+    def _display_long_term_reflection(self) -> None:
+        """Format and display long-term reflection in a clean, readable format."""
+        if not self.long_term_reflection:
+            return
+
+        # Parse the reflection into sections
+        lines = self.long_term_reflection.strip().split('\n')
+
+        # Print header
+        logger.info("")
+        logger.info("=" * 80)
+        logger.info("CUMULATIVE KNOWLEDGE - Strategic Insights")
+        logger.info("=" * 80)
+
+        current_section = None
+        section_items = []
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Detect section headers (lines starting with ##)
+            if stripped.startswith('##'):
+                # Print previous section if exists
+                if current_section and section_items:
+                    logger.info(f" ")
+                    logger.info(f"{current_section}")
+                    logger.info("-" * 60)
+                    for item in section_items:
+                        logger.info(f"  {item}")
+                    section_items = []
+
+                # Start new section
+                current_section = stripped.replace('##', '').strip()
+
+            # Detect bullet points
+            elif stripped.startswith('-') or stripped.startswith('*'):
+                # Clean up bullet and extract content
+                content = stripped.lstrip('-*').strip()
+                # Handle bold markdown **text**
+                content = content.replace('**', '')
+                section_items.append(f"• {content}")
+
+            # Handle non-empty lines that aren't headers or bullets
+            elif stripped and not stripped.startswith('='):
+                section_items.append(f"  {stripped}")
+
+        # Print final section
+        if current_section and section_items:
+            logger.info(f"\n{current_section}")
+            logger.info("-" * 60)
+            for item in section_items:
+                logger.info(f"  {item}")
+
+        logger.info("")
+        logger.info("=" * 80)
+
+    def _report_iteration_statistics(self) -> None:
+        """Report comprehensive statistics for current iteration."""
+        # Calculate fitness statistics
+        fitnesses = [c["fitness"] for c in self.population]
+        best = max(self.population, key=lambda x: x["fitness"])
+        worst = min(self.population, key=lambda x: x["fitness"])
+        avg_fitness = sum(fitnesses) / len(fitnesses)
+
+        # Count variations tested
+        # This generation: count strategies recorded in current iteration
+        gen_tested = sum(1 for record in self.idea_history.history if record.iteration == self.generation)
+
+        # Total tested: get from performance summary
+        perf_summary = self.idea_history.get_performance_summary()
+        total_tested = perf_summary.get("total_tested", 0)
+
+        # Report using logger.info
+        logger.info(f"  Iteration [{self.generation}] Statistics:")
+        logger.info(f"  Code variations tested this iteration: {gen_tested}")
+        logger.info(f"  Code variations tested total: {total_tested}")
+        logger.info(f"  Best solution: ID={best['candidate_id']}, fitness={best['fitness']*100:.4f}%")
+
+        # Show best idea on new line
+        best_idea = best.get('idea', 'N/A')
+        logger.info(f"  Best idea: {best_idea}")
+
+        logger.info(f"  Worst solution: ID={worst['candidate_id']}, fitness={worst['fitness']*100:.4f}%")
+        logger.info(f"  Average population fitness: {avg_fitness*100:.4f}%")
 
     def _report_strategy_progress(self) -> None:
         """Generate and display strategy progress report for user interpretability."""
@@ -991,9 +1203,9 @@ class EvolutionLoop:
         )
 
         # Display to user (always visible using reflection logging)
-        self._log_reflection(
+        logger.info(
             f"\n{'='*70}\n"
-            f"STRATEGY PROGRESS REPORT - Iteration {self.generation}\n"
+            f"EXPOLRATION STRATEGIES - Iteration {self.generation}\n"
             f"{'='*70}\n"
             f"{analysis}\n"
             f"{'='*70}\n"
@@ -1003,27 +1215,27 @@ class EvolutionLoop:
         """Print final evolution statistics (always shown)."""
         best = max(self.population, key=lambda x: x["fitness"])
 
-        self._log(f"\n{'='*80}", "info")
-        self._log(f"FINAL STATISTICS", "info")
-        self._log(f"{'='*80}", "info")
-        self._log(f"Total candidates evaluated: {self.candidate_counter}", "info")
-        self._log(f"Final population size: {len(self.population)}", "info")
-        self._log(f"Best candidate ID: {best['candidate_id']}", "info")
-        self._log(f"Best fitness: {best['fitness']*100:.4f}%", "info")
+        logger.info(f"\n{'='*80}")
+        logger.info(f"FINAL STATISTICS")
+        logger.info(f"{'='*80}")
+        logger.info(f"Total candidates evaluated: {self.candidate_counter}")
+        logger.info(f"Final population size: {len(self.population)}")
+        logger.info(f"Best candidate ID: {best['candidate_id']}")
+        logger.info(f"Best fitness: {best['fitness']*100:.4f}%")
         if self.use_vrpagent and "base_fitness" in best:
-            self._log(f"Best base fitness (no penalty): {best['base_fitness']*100:.4f}%", "info")
-        self._log(f"Best generation: {best['generation']}", "info")
+            logger.info(f"Best base fitness (no penalty): {best['base_fitness']*100:.4f}%")
+        logger.info(f"Best generation: {best['generation']}")
 
         # Show best candidate's idea
         if best.get("idea"):
-            self._log(f"\nBest candidate idea:", "info")
-            self._log(f"  {best['idea']}", "info")
+            logger.info(f"\nBest candidate idea:")
+            logger.info(f"  {best['idea']}")
 
-        self._log(f"\nBest candidate performance:", "info")
+        logger.info(f"\nBest candidate performance:")
         for result in best["eval_results"]:
             instance_name = result.get('instance', result.get('name', 'unknown'))
             improvement = result.get('improvement', result.get('improvement_pct', 0) / 100)
-            self._log(f"  {instance_name}: {improvement*100:.3f}% improvement", "info")
+            logger.info(f"  {instance_name}: {improvement*100:.3f}% improvement")
 
         # Code length statistics
         if self.use_vrpagent:
@@ -1031,9 +1243,9 @@ class EvolutionLoop:
                             if l.strip() and not l.strip().startswith('//')
                             and not l.strip().startswith('package')
                             and not l.strip().startswith('import')])
-            self._log(f"\nBest candidate code length: {code_lines} lines", "info")
+            logger.info(f"\nBest candidate code length: {code_lines} lines")
 
-        self._log(f"\n{'='*80}\n", "info")
+        logger.info(f"\n{'='*80}\n")
 
     def save_idea_evolution_log(self, log_file: str = None) -> None:
         """Save evolution history of ideas for analysis."""
@@ -1065,14 +1277,14 @@ class EvolutionLoop:
 
                 f.write("---\n\n")
 
-        self._log(f"[LOG] Saved idea evolution to {log_file}", "info")
+        logger.info(f"[LOG] Saved idea evolution to {log_file}")
 
 
 # Example usage
 if __name__ == "__main__":
-    print("="*80)
-    print("ReEvo-style Evolution Loop for VRP Destroy Strategies")
-    print("="*80)
+    logger.debug("="*80)
+    logger.debug("ReEvo-style Evolution Loop for VRP Destroy Strategies")
+    logger.debug("="*80)
 
     # Create evolution loop
     evolution = EvolutionLoop(

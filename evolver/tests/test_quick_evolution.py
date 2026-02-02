@@ -1,6 +1,7 @@
 """Quick test of evolution loop with minimal settings"""
 import sys
 from pathlib import Path
+from loguru import logger
 
 # Add src directory to path
 project_root = Path(__file__).parent.parent
@@ -17,12 +18,12 @@ temp_dir = project_root / "temp"
 if temp_dir.exists():
     shutil.rmtree(temp_dir)
 
-print("="*80)
-print("QUICK EVOLUTION TEST - PARALLEL MULTI-INSTANCE EVALUATION")
-print("="*80)
-print("Using Vrp_Set_X dataset with small instances for fast testing")
-print("Instances: 4 instances with parallel evaluation (4 cores)")
-print("="*80)
+logger.debug("="*80)
+logger.debug("QUICK EVOLUTION TEST - PARALLEL MULTI-INSTANCE EVALUATION")
+logger.debug("="*80)
+logger.debug("Using Vrp_Set_X dataset with small instances for fast testing")
+logger.debug("Instances: 4 instances with parallel evaluation (4 cores)")
+logger.debug("="*80)
 
 # Small, fast configuration using Vrp_Set_X dataset
 evolution = EvolutionLoop(
@@ -42,22 +43,22 @@ evolution = EvolutionLoop(
     max_parallel_evals=4                 # Parallel evaluation on 4 cores
 )
 
-print(f"Target instances: {evolution.target_instances}")
-print(f"Population size: {evolution.population_size}")
-print(f"Elite size: {evolution.elite_size}")
-print("="*80)
+logger.debug(f"Target instances: {evolution.target_instances}")
+logger.debug(f"Population size: {evolution.population_size}")
+logger.debug(f"Elite size: {evolution.elite_size}")
+logger.debug("="*80)
 
 # Initialize with 2 seeds
-print("\n[PHASE 1] Initializing population with 2 seeds...")
+logger.debug("\n[PHASE 1] Initializing population with 2 seeds...")
 evolution.initialize_population(num_seeds=2)
 
 # Run 1 generation
-print("\n[PHASE 2] Running 1 generation...")
+logger.debug("\n[PHASE 2] Running 1 generation...")
 evolution.evolve(
     num_generations=1,
     reflection_frequency=2
 )
 
-print("\n" + "="*80)
-print("QUICK TEST COMPLETED")
-print("="*80)
+logger.debug("\n" + "="*80)
+logger.debug("QUICK TEST COMPLETED")
+logger.debug("="*80)

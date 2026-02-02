@@ -14,6 +14,8 @@ API key should be in .env file as GEMINI_API_KEY
 import os
 from typing import Optional, Dict, List, Any
 
+from loguru import logger
+
 # Load environment variables if dotenv is available
 try:
     from dotenv import load_dotenv
@@ -33,8 +35,7 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    print("[WARNING] google-genai not installed. Using template-based generation only.")
-    print("Install with: pip install google-genai")
+    logger.warning("[WARNING] google-genai not installed. Using template-based generation only.")
 
 
 class LLMAgents:
@@ -55,16 +56,16 @@ class LLMAgents:
         if self.use_llm:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
-                print("[WARNING] GEMINI_API_KEY not found in environment.")
-                print("Set it with: export GEMINI_API_KEY=your-key-here")
-                print("Falling back to template-based generation.")
+                logger.warning("[WARNING] GEMINI_API_KEY not found in environment.")
+                logger.warning("Set it with: export GEMINI_API_KEY=your-key-here")
+                logger.debug("Falling back to template-based generation.")
                 self.use_llm = False
             else:
                 os.environ["GOOGLE_API_KEY"] = api_key  # New SDK uses GOOGLE_API_KEY
                 self.client = genai.Client()
-                print(f"[LLM] Using Gemini model: {self.model_name}")
+                logger.debug(f"[LLM] Using Gemini model: {self.model_name}")
         else:
-            print("[LLM] Using template-based generation (no API calls)")
+            logger.debug("[LLM] Using template-based generation (no API calls)")
 
         # Constraints that ALL generated code must follow
         self.CONSTRAINTS = """
@@ -211,7 +212,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 mutation_strength=mutation_strength,
                 parent_idea=parent_idea
             )
-            print(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
+            logger.debug(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
         elif long_term_reflection and parent_results:
             # ReEvo reflection-guided mutation
             prompt = ReflectionPrompts.mutation_with_long_term_reflection(
@@ -221,13 +222,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 mutation_strength=mutation_strength,
                 parent_idea=parent_idea
             )
-            print(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
+            logger.debug(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
         else:
             # Basic mutation prompt
             prompt = self._build_mutation_prompt(parent_code, long_term_reflection or "", mutation_strength)
-            print(f"[LLM MUTATION] Using basic mutation (limited reflection)")
+            logger.debug(f"[LLM MUTATION] Using basic mutation (limited reflection)")
 
-        print(f"[LLM MUTATION] Prompt length: {len(prompt)} chars")
+        logger.debug(f"[LLM MUTATION] Prompt length: {len(prompt)} chars")
 
         if self.use_llm:
             try:
@@ -237,15 +238,15 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 idea, code = self._extract_idea_and_code(response.text)
                 if idea is None or code is None:
-                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
-                    print("[LLM] Falling back to template mutation")
+                    logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    logger.warning("[LLM] Falling back to template mutation")
                     fallback_idea = f"Mutated version of parent strategy ({mutation_type or 'generic'} mutation)."
                     return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
-                print(f"[LLM MUTATION] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                logger.debug(f"[LLM MUTATION] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
                 return idea, code
             except Exception as e:
-                print(f"[LLM ERROR] Mutation failed: {e}")
-                print("[LLM] Falling back to template mutation")
+                logger.error(f"[LLM ERROR] Mutation failed: {e}")
+                logger.warning("[LLM] Falling back to template mutation")
                 fallback_idea = "Mutated version of parent strategy."
                 return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
         else:
@@ -297,7 +298,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 elite_idea=parent1_idea,
                 non_elite_idea=parent2_idea
             )
-            print(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
+            logger.debug(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
         elif short_term_reflection:
             # ReEvo reflection-guided crossover
             prompt = ReflectionPrompts.crossover_with_short_term_reflection(
@@ -307,13 +308,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 parent1_idea=parent1_idea,
                 parent2_idea=parent2_idea
             )
-            print(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
+            logger.debug(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
         else:
             # Basic crossover prompt
             prompt = self._build_crossover_prompt(parent1_code, parent2_code)
-            print(f"[LLM CROSSOVER] Using basic crossover (no reflection)")
+            logger.debug(f"[LLM CROSSOVER] Using basic crossover (no reflection)")
 
-        print(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars")
+        logger.debug(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars")
 
         if self.use_llm:
             try:
@@ -323,21 +324,83 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 idea, code = self._extract_idea_and_code(response.text)
                 if idea is None or code is None:
-                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
-                    print("[LLM] Falling back to template crossover")
+                    logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    logger.warning("[LLM] Falling back to template crossover")
                     fallback_idea = "Crossover offspring combining features from both parents."
                     return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
-                print(f"[LLM CROSSOVER] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                logger.debug(f"[LLM CROSSOVER] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
                 return idea, code
             except Exception as e:
-                print(f"[LLM ERROR] Crossover failed: {e}")
-                print("[LLM] Falling back to template crossover")
+                logger.error(f"[LLM ERROR] Crossover failed: {e}")
+                logger.warning("[LLM] Falling back to template crossover")
                 fallback_idea = "Crossover offspring from parents."
                 return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
         else:
             # Placeholder: return parent1 with comment
             fallback_idea = "Template-based crossover (LLM disabled)."
             return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
+
+    def generate_with_user_insight(self,
+                                   insight_type: str,
+                                   idea: str,
+                                   related_candidates: Optional[List[Dict[str, Any]]] = None,
+                                   long_term_reflection: Optional[str] = None) -> tuple:
+        """
+        Generate strategy guided by user insight.
+
+        Supports three insight types:
+        - "initialize": Create a new strategy from scratch based on user's idea (no related candidates)
+        - "mutate": Modify a single existing strategy guided by user's idea (one related candidate)
+        - "crossover": Combine features from multiple candidates based on user's idea (2+ related candidates)
+
+        Args:
+            insight_type: One of "initialize", "mutate", "crossover"
+            idea: User's high-level idea/concept for the strategy
+            related_candidates: List of candidate dicts:
+                - None or empty for "initialize"
+                - Single candidate for "mutate"
+                - Multiple candidates for "crossover"
+            long_term_reflection: Optional accumulated evolutionary knowledge
+
+        Returns:
+            (idea, code) tuple with generated idea description and Java source code
+        """
+        from vrpagent_prompts import VRPAgentPrompts
+
+        prompt = VRPAgentPrompts.user_insight_generation(
+            insight_type=insight_type,
+            idea=idea,
+            related_candidates=related_candidates,
+            long_term_reflection=long_term_reflection
+        )
+
+        logger.debug(f"[LLM USER_INSIGHT] Type: {insight_type}")
+        logger.info(f"[LLM USER_INSIGHT] User idea: {idea[:300]}...")
+        logger.debug(f"[LLM USER_INSIGHT] Prompt length: {len(prompt)} chars")
+
+        if self.use_llm:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+                generated_idea, code = self._extract_idea_and_code(response.text)
+                if generated_idea is None or code is None:
+                    logger.debug("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    logger.debug("[LLM] Falling back to template generation")
+                    fallback_idea = f"User-guided {insight_type} strategy: {idea[:50]}..."
+                    return fallback_idea, self._template_random_removal()
+                logger.debug(f"[LLM USER_INSIGHT] Generated idea ({len(generated_idea)} chars) and code ({len(code)} chars)")
+                return generated_idea, code
+            except Exception as e:
+                logger.debug(f"[LLM ERROR] User insight generation failed: {e}")
+                logger.debug("[LLM] Falling back to template generation")
+                fallback_idea = f"User-guided strategy (fallback): {idea[:50]}..."
+                return fallback_idea, self._template_random_removal()
+        else:
+            # Placeholder: return template with user idea as comment
+            fallback_idea = f"Template-based strategy (LLM disabled). User idea: {idea}"
+            return fallback_idea, self._template_random_removal()
 
     def reflect_short_term(self,
                            better_code: str,
@@ -375,7 +438,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Short-term reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Short-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -443,7 +506,7 @@ Consider combining the superior selection criteria with complementary diversific
         truncated_bullets = sum(1 for line in result_lines if line.strip().startswith('-') or line.strip().startswith('*'))
 
         if truncated_bullets < original_bullets:
-            print(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
+            logger.debug(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
 
         return truncated
 
@@ -482,28 +545,12 @@ Consider combining the superior selection criteria with complementary diversific
                 )
                 reflection = response.text
             except Exception as e:
-                print(f"[LLM ERROR] Long-term reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Long-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
         if reflection is None:
-            reflection = f"""
-## NODE SELECTION PRINCIPLES
-- Spatial clustering using KNN improves repair efficiency
-- Balance determinism with controlled randomness
-
-## ROUTE INTERACTION PRINCIPLES
-- Route-aware selection maintains solution structure
-- Consider route demand and cost when selecting nodes
-
-## DIVERSIFICATION PRINCIPLES
-- Mix local intensification with global exploration
-- Adapt selection strategy based on omega (numToRemove)
-
-## AVOID (Anti-patterns)
-- Pure random selection without structure
-- Ignoring route boundaries entirely
-"""
+            reflection = ""
 
         # Enforce reflection size cap: truncate to ≤12 bullets per section
         return self._truncate_reflection_sections(reflection, max_bullets=12)
@@ -558,7 +605,7 @@ Keep it concise and actionable.
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -610,7 +657,7 @@ REFLECTION:
                 if response and response.text:
                     return response.text.strip()
             except Exception as e:
-                print(f"[LLM ERROR] Strategy analysis failed: {e}")
+                logger.warning(f"[LLM ERROR] Strategy analysis failed: {e}")
                 # Fall through to template
 
         # Template fallback
@@ -667,16 +714,21 @@ REFLECTION:
 Provide a TWO-PART analysis report using ALNS/CVRP domain language:
 
 **PART 1: Performance of Tested Approaches**
-Summarize in 2-3 sentences:
-- Which strategic approaches (clustering, cost-based selection, spatial coherence, etc.) have been tested
-- Which approaches led to solution quality improvement vs which did not
-- Overall trend (improving, stagnating, exploring)
+Group the tested approaches into 3-4 conceptual clusters (e.g., "Random Selection", "Cost-Based", "Clustering-Based", "Hybrid"). For each cluster:
+- List the cluster name and key concept
+- Annotate with concrete performance: % improvement OR "Success" / "Fail" / "No improvement"
+- Be specific with numbers from the data provided
+
+Format as a bulleted list with performance annotations:
+- **[Cluster Name]**: Brief description → Performance: [X.XX%] or [Success/Fail]
 
 **PART 2: Current Focus and Next Steps**
-Summarize in 2-3 sentences:
-- What conceptual directions are currently active (categorize the current strategies into 2-3 general approaches)
-- What directions will be explored next (these strategies will be refined and combined)
-- Strategic prediction based on insights
+Provide a concise, technical itemized list (3-5 bullet points):
+- What conceptual directions are currently active (use technical ALNS/CVRP terms)
+- What specific refinements will be explored next
+- Concrete strategic predictions based on insights
+
+Format as technical bullet points, each 1 sentence max. Be precise and actionable.
 
 **IMPORTANT LANGUAGE RULES:**
 - Use: "iteration", "strategy", "refine", "combine", "solution quality", "performance", "active strategies"
@@ -685,11 +737,17 @@ Summarize in 2-3 sentences:
 - Write for domain experts who understand CVRP/ALNS but NOT evolutionary algorithms
 
 OUTPUT FORMAT:
-## Part 1: Performance Analysis
-[Your 2-3 sentence analysis here]
+## Part 1: Historical Performance
+- **[Cluster 1]**: Description → Performance: X.XX%
+- **[Cluster 2]**: Description → Performance: Success/Fail
+- **[Cluster 3]**: Description → Performance: X.XX%
+[etc.]
 
-## Part 2: Current Focus & Next Steps
-[Your 2-3 sentence analysis here]
+## Part 2: Current & Next Steps
+- Active direction 1 (technical description)
+- Active direction 2 (technical description)
+- Next refinement to explore
+- Strategic prediction based on data
 """
 
         return prompt
@@ -700,23 +758,47 @@ OUTPUT FORMAT:
                                     performance_metrics: Dict[str, float]) -> str:
         """Generate template-based strategy analysis when LLM is unavailable."""
 
-        improved_count = sum(1 for h in historical_ideas if h.get("improved", False))
-        total_tested = len(historical_ideas)
+        # Analyze historical performance
+        improved_ideas = [h for h in historical_ideas if h.get("improved", False)]
+        failed_ideas = [h for h in historical_ideas if not h.get("improved", False)]
 
-        part1 = f"""## Part 1: Performance Analysis
-We have tested {performance_metrics.get('total_tested', 0)} destroy strategies across {total_tested} recent iterations. """
+        # Part 1: Cluster analysis
+        part1 = "## Part 1: Performance Analysis\n"
 
-        if improved_count > total_tested * 0.5:
-            part1 += f"Approximately {improved_count}/{total_tested} recent strategies led to solution quality improvement. Overall trend shows steady progress."
-        elif improved_count > 0:
-            part1 += f"Mixed results with {improved_count}/{total_tested} strategies showing improvement. System is actively exploring different approaches."
+        if improved_ideas:
+            improved_avg = sum([h.get("performance", 0) for h in improved_ideas]) / len(improved_ideas)
+            part1 += f"- **Successful Approaches**: {len(improved_ideas)} strategies showed improvement → Performance: {improved_avg*100:.2f}% avg\n"
+
+        if failed_ideas:
+            failed_avg = sum([h.get("performance", 0) for h in failed_ideas]) / len(failed_ideas) if failed_ideas else 0
+            part1 += f"- **Unsuccessful Approaches**: {len(failed_ideas)} strategies showed no improvement → Performance: {failed_avg*100:.2f}% avg\n"
+
+        if not historical_ideas:
+            part1 += "- **Initial Phase**: No historical data available yet\n"
+
+        # Overall trend
+        if len(improved_ideas) > len(failed_ideas):
+            part1 += f"- **Overall Trend**: Improving ({len(improved_ideas)}/{len(historical_ideas)} success rate)\n"
+        elif len(improved_ideas) > 0:
+            part1 += f"- **Overall Trend**: Exploring ({len(improved_ideas)}/{len(historical_ideas)} success rate)\n"
         else:
-            part1 += f"Recent strategies have not improved upon best solution. System is in exploration mode seeking new directions."
+            part1 += "- **Overall Trend**: Stagnating (exploration phase)\n"
 
-        part2 = f"""## Part 2: Current Focus & Next Steps
-Currently maintaining {len(current_strategies)} active strategies with best quality at {performance_metrics.get('best', 0)*100:.2f}%. Next iteration will refine these approaches through strategic modifications and combinations. The system will continue exploring variations of successful patterns while maintaining diversity."""
+        # Part 2: Current focus
+        best_current = max([s.get("performance", 0) for s in current_strategies]) if current_strategies else 0
 
-        return f"{part1}\n\n{part2}"
+        part2 = "\n## Part 2: Current Focus & Next Steps\n"
+        part2 += f"- Active strategies maintain {len(current_strategies)} variants with best at {best_current*100:.2f}%\n"
+
+        if improved_ideas:
+            part2 += "- Next iteration will refine successful approaches identified above\n"
+        else:
+            part2 += "- Next iteration will explore alternative node selection mechanisms\n"
+
+        part2 += "- System will combine high-performing strategy features through strategic modifications\n"
+        part2 += f"- Target: Improve beyond current best of {performance_metrics.get('best', 0)*100:.2f}%\n"
+
+        return part1 + part2
 
     def _build_mutation_prompt(self, parent_code: str, reflection: str, strength: float) -> str:
         """Build mutation prompt."""
@@ -796,11 +878,11 @@ Return only the complete Java class code, no explanations, no markdown.
         code_match = re.search(r'##\s*CODE\s*\n```java\s*\n(.*?)\n```', llm_response, re.DOTALL | re.IGNORECASE)
 
         if not idea_match or not code_match:
-            print("[PARSE ERROR] Missing IDEA or CODE section in LLM response")
+            logger.error("[PARSE ERROR] Missing IDEA or CODE section in LLM response")
             # Try fallback: maybe LLM only provided code
             code_fallback = self._extract_java_code(llm_response)
             if code_fallback and len(code_fallback) > 50:  # Valid code found
-                print("[PARSE FALLBACK] Found code without IDEA section, using placeholder idea")
+                logger.warning("[PARSE FALLBACK] Found code without IDEA section, using placeholder idea")
                 return ("LLM-generated strategy without explicit idea description.", code_fallback)
             return None, None
 
