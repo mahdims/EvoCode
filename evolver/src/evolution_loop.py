@@ -36,7 +36,7 @@ class EvolutionLoop:
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
                  debug: bool = True,
-                 user_insight: str = "",
+                 user_insight: Optional[List[Dict[str, Any]]] = None,
                  num_workers: int = 2,
                  instance_workers: str | int = "auto",
                  max_parallel_evals: int = None):
@@ -54,7 +54,10 @@ class EvolutionLoop:
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
             debug: If True, show all output. If False, only show reflections and best candidate per generation
-            user_insight: User-provided insight string for guiding evolution (reserved for future use)
+            user_insight: List of user-provided insights for guiding evolution. Each insight is a dict with:
+                - type: "initialize" | "mutate" | "crossover"
+                - idea: str describing the user's concept
+                - related_population: list of candidate_ids (None for initialize, one for mutate, 2+ for crossover)
             num_workers: Concurrent candidate pipelines (default: 2)
             instance_workers: Parallel instance evaluations per candidate (default: "auto" = cpu_count // num_workers)
             max_parallel_evals: Maximum total parallel workers. If set, intelligently divides budget:
@@ -446,6 +449,139 @@ class EvolutionLoop:
             mutation_type="crossover"
         )
 
+    def _generate_with_user_insight(self) -> List[Dict[str, Any]]:
+        """
+        Generate offspring using user-provided insights.
+
+        The user_insight should be a list of insight dicts, each with keys:
+        - type: "initialize", "mutate", or "crossover"
+        - idea: str describing the user's concept
+        - related_population: list of candidate_ids (ignored for initialize,
+          single for mutate, 2+ for crossover)
+
+        This allows multiple operations in one call:
+        - Initialize multiple new directions
+        - Mutate different candidates with different ideas
+        - Crossover between specific candidate groups
+
+        Returns:
+            List of new candidate dicts (may be empty if all generations failed)
+        """
+        if not self.user_insight:
+            self._log("[USER_INSIGHT] No user insight provided")
+            return []
+
+        # Parse user_insight if it's a string (JSON)
+        if isinstance(self.user_insight, str):
+            try:
+                insights = json.loads(self.user_insight)
+            except json.JSONDecodeError as e:
+                self._log(f"[USER_INSIGHT] Failed to parse user_insight as JSON: {e}")
+                return []
+        else:
+            insights = self.user_insight
+
+        # Ensure insights is a list
+        if not isinstance(insights, list):
+            self._log("[USER_INSIGHT] user_insight should be a list of insight dicts")
+            return []
+
+        if not insights:
+            self._log("[USER_INSIGHT] Empty user_insight list")
+            return []
+
+        self._log(f"[USER_INSIGHT] Processing {len(insights)} user insights")
+
+        # Build candidate lookup from population
+        id_to_candidate = {c["candidate_id"]: c for c in self.population}
+
+        offspring_list = []
+        for i, insight in enumerate(insights):
+            self._log(f"\n[USER_INSIGHT] Processing insight {i + 1}/{len(insights)}")
+
+            # Validate required fields
+            insight_type = insight.get("type")
+            idea = insight.get("idea")
+
+            if not insight_type:
+                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'type' field, skipping")
+                continue
+            if not idea:
+                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'idea' field, skipping")
+                continue
+
+            valid_types = ["initialize", "mutate", "crossover"]
+            if insight_type not in valid_types:
+                self._log(f"[USER_INSIGHT] Insight {i}: Invalid type '{insight_type}', skipping")
+                continue
+
+            # Get related population candidate IDs
+            related_ids = insight.get("related_population", [])
+
+            # Resolve related candidates from population
+            related_candidates = []
+            if related_ids:
+                for cid in related_ids:
+                    if cid in id_to_candidate:
+                        related_candidates.append(id_to_candidate[cid])
+                    else:
+                        self._log(f"[USER_INSIGHT] Warning: candidate_id {cid} not found in population")
+
+            # Validate related_candidates based on type
+            if insight_type == "initialize":
+                if related_candidates:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'initialize' type ignores related_population")
+                related_candidates = None
+            elif insight_type == "mutate":
+                if not related_candidates:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' requires one candidate, skipping")
+                    continue
+                if len(related_candidates) > 1:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' expects one candidate, using first")
+                related_candidates = [related_candidates[0]]
+            elif insight_type == "crossover":
+                if len(related_candidates) < 2:
+                    self._log(f"[USER_INSIGHT] Insight {i}: 'crossover' requires 2+ candidates, skipping")
+                    continue
+
+            self._log(f"[USER_INSIGHT] Insight {i}: type='{insight_type}', idea='{idea[:50]}...'")
+            if related_candidates:
+                self._log(f"[USER_INSIGHT] Insight {i}: Related candidates: {[c['candidate_id'] for c in related_candidates]}")
+
+            # Generate using LLM with user insight
+            try:
+                offspring_idea, offspring_code = self.llm.generate_with_user_insight(
+                    insight_type=insight_type,
+                    idea=idea,
+                    related_candidates=related_candidates,
+                    long_term_reflection=self.long_term_reflection
+                )
+
+                # Determine parent_id for tracking
+                parent_id = None
+                if related_candidates:
+                    parent_id = related_candidates[0]["candidate_id"]
+
+                offspring = self._compile_and_evaluate_offspring(
+                    offspring_code,
+                    offspring_idea,
+                    parent_id=parent_id,
+                    mutation_type=f"user_insight_{insight_type}"
+                )
+
+                if offspring:
+                    offspring_list.append(offspring)
+                    self._log(f"[USER_INSIGHT] Insight {i}: Successfully generated candidate {offspring['candidate_id']}")
+                else:
+                    self._log(f"[USER_INSIGHT] Insight {i}: Failed to compile/evaluate offspring")
+
+            except Exception as e:
+                self._log(f"[USER_INSIGHT] Insight {i}: Error during generation: {e}")
+                continue
+
+        self._log(f"\n[USER_INSIGHT] Generated {len(offspring_list)} offspring from {len(insights)} insights")
+        return offspring_list
+
     def _mutate_with_long_term_reflection(self) -> Optional[Dict[str, Any]]:
         """
         Elitist mutation with long-term reflection guidance.
@@ -618,6 +754,19 @@ class EvolutionLoop:
         logger.info(f"STARTING EVOLUTION: {num_generations} generations")
         logger.info(f"MODE: Work-stealing pipeline (workers={self.num_workers}, instance_workers={self._get_instance_workers()})")
         logger.info(f"{'='*80}")
+
+        # Process user insights before main evolution loop
+        if self.user_insight:
+            self._log(f"\n{'='*80}", "info")
+            self._log(f"PROCESSING USER INSIGHTS", "info")
+            self._log(f"{'='*80}", "info")
+            user_offspring = self._generate_with_user_insight()
+            for offspring in user_offspring:
+                self.population.append(offspring)
+            self._log(f"[USER_INSIGHT] Added {len(user_offspring)} candidates to population", "info")
+            # Apply survival selection if population exceeds limit
+            if len(self.population) > self.population_size:
+                self.survival_selection()
 
         for gen in range(num_generations):
             self.generation = gen + 1
