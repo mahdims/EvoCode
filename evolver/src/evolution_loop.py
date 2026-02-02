@@ -729,12 +729,18 @@ class EvolutionLoop:
                         with results_lock:
                             self.short_term_reflections.append(short_term_reflection)
 
-                        offspring_code = self.llm.crossover(
+                        # Get parent ideas for context
+                        parent1_idea = better_parent.get("idea")
+                        parent2_idea = worse_parent.get("idea")
+
+                        offspring_idea, offspring_code = self.llm.crossover(
                             parent1_code=better_parent["code"],
                             parent2_code=worse_parent["code"],
                             parent1_results=better_parent["eval_results"],
                             parent2_results=worse_parent["eval_results"],
                             short_term_reflection=short_term_reflection,
+                            parent1_idea=parent1_idea,
+                            parent2_idea=parent2_idea,
                             use_vrpagent_bias=self.use_vrpagent,
                             elite_bias=0.75
                         )
@@ -753,10 +759,14 @@ class EvolutionLoop:
                                 long_term_reflection=self.long_term_reflection
                             )
 
-                        offspring_code = self.llm.mutate(
+                        # Get parent idea for context
+                        parent_idea = elite_parent.get("idea")
+
+                        offspring_idea, offspring_code = self.llm.mutate(
                             parent_code=elite_parent["code"],
                             parent_results=elite_parent["eval_results"],
                             long_term_reflection=self.long_term_reflection,
+                            parent_idea=parent_idea,
                             mutation_strength=0.3,
                             mutation_type=mutation_type,
                             generation=self.generation
@@ -768,6 +778,8 @@ class EvolutionLoop:
                     compile_result = self.candidate_manager.compile_candidate(
                         strategy_code=offspring_code,
                         candidate_id=candidate_id,
+                        idea=offspring_idea,
+                        generation=self.generation,
                         parent_id=parent_id,
                         mutation_type=mutation_type
                     )
@@ -813,6 +825,7 @@ class EvolutionLoop:
                     offspring = {
                         "candidate_id": candidate_id,
                         "code": offspring_code,
+                        "idea": offspring_idea,
                         "metadata": compile_result,
                         "eval_results": eval_results,
                         "fitness": fitness,
