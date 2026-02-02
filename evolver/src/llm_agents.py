@@ -339,6 +339,68 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
             fallback_idea = "Template-based crossover (LLM disabled)."
             return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
 
+    def generate_with_user_insight(self,
+                                   insight_type: str,
+                                   idea: str,
+                                   related_candidates: Optional[List[Dict[str, Any]]] = None,
+                                   long_term_reflection: Optional[str] = None) -> tuple:
+        """
+        Generate strategy guided by user insight.
+
+        Supports three insight types:
+        - "initialize": Create a new strategy from scratch based on user's idea (no related candidates)
+        - "mutate": Modify a single existing strategy guided by user's idea (one related candidate)
+        - "crossover": Combine features from multiple candidates based on user's idea (2+ related candidates)
+
+        Args:
+            insight_type: One of "initialize", "mutate", "crossover"
+            idea: User's high-level idea/concept for the strategy
+            related_candidates: List of candidate dicts:
+                - None or empty for "initialize"
+                - Single candidate for "mutate"
+                - Multiple candidates for "crossover"
+            long_term_reflection: Optional accumulated evolutionary knowledge
+
+        Returns:
+            (idea, code) tuple with generated idea description and Java source code
+        """
+        from vrpagent_prompts import VRPAgentPrompts
+
+        prompt = VRPAgentPrompts.user_insight_generation(
+            insight_type=insight_type,
+            idea=idea,
+            related_candidates=related_candidates,
+            long_term_reflection=long_term_reflection
+        )
+
+        print(f"[LLM USER_INSIGHT] Type: {insight_type}")
+        print(f"[LLM USER_INSIGHT] User idea: {idea[:100]}...")
+        print(f"[LLM USER_INSIGHT] Prompt length: {len(prompt)} chars")
+
+        if self.use_llm:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+                generated_idea, code = self._extract_idea_and_code(response.text)
+                if generated_idea is None or code is None:
+                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    print("[LLM] Falling back to template generation")
+                    fallback_idea = f"User-guided {insight_type} strategy: {idea[:50]}..."
+                    return fallback_idea, self._template_random_removal()
+                print(f"[LLM USER_INSIGHT] Generated idea ({len(generated_idea)} chars) and code ({len(code)} chars)")
+                return generated_idea, code
+            except Exception as e:
+                print(f"[LLM ERROR] User insight generation failed: {e}")
+                print("[LLM] Falling back to template generation")
+                fallback_idea = f"User-guided strategy (fallback): {idea[:50]}..."
+                return fallback_idea, self._template_random_removal()
+        else:
+            # Placeholder: return template with user idea as comment
+            fallback_idea = f"Template-based strategy (LLM disabled). User idea: {idea}"
+            return fallback_idea, self._template_random_removal()
+
     def reflect_short_term(self,
                            better_code: str,
                            better_results: List[Dict[str, Any]],
