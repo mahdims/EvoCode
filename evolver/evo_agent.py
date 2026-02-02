@@ -99,7 +99,7 @@ def print_config(config: dict, debug: bool = True):
     print(f"  Population: {config['population_size']} (elite ratio: {config['elite_ratio']})")
     print(f"  Generations: {config['num_generations']} (seeds: {config['num_seeds']})")
     print(f"  Mutation/Crossover: {config['mutation_rate']:.0%}/{config['crossover_rate']:.0%}")
-    print(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config['code_length_penalty_alpha']})")
+    print(f"  VRPAGENT: {config['use_vrpagent']} (penalty alpha={config['code_length_penalty_alpha']})")
     print(f"  Random seed: {config['seed']}")
     print(f"  Resume: {config.get('resume', False)}")
     print(f"  Debug output: {config.get('debug', True)}")

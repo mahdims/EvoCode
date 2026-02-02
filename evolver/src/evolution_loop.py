@@ -124,6 +124,11 @@ class EvolutionLoop:
         # Diversity tracking (Idea-based)
         self.diversity_checker = DiversityChecker(similarity_threshold=0.80)
 
+        # Strategy history tracking for interpretability
+        from idea_history_tracker import IdeaHistoryTracker
+        self.idea_history = IdeaHistoryTracker()
+        self._prev_iteration_best = 0.0  # Track improvement trends
+
         random.seed(seed)
 
     def _get_instance_workers(self) -> int:
@@ -231,6 +236,22 @@ class EvolutionLoop:
         self._log(f"[RESUME] Resuming from generation {self.generation}, next candidate ID: {self.candidate_counter}", "info")
         self._log(f"[RESUME] Best fitness: {self.population[0]['fitness']*100:.4f}%", "info")
 
+        # Rebuild idea history from loaded candidates
+        if self.population:
+            self._prev_iteration_best = max(c["fitness"] for c in self.population)
+
+            for c in self.population:
+                if c.get("idea"):
+                    self.idea_history.record_strategy(
+                        iteration=c.get("generation", 0),
+                        idea=c["idea"],
+                        performance=c.get("fitness", 0.0),
+                        candidate_id=c["candidate_id"],
+                        mutation_type=c.get("mutation_type", "unknown")
+                    )
+
+            self._log(f"[RESUME] Rebuilt idea history with {len(self.idea_history.history)} strategies", "info")
+
         return True
 
     def initialize_population(self, num_seeds: int = 3) -> None:
@@ -305,6 +326,17 @@ class EvolutionLoop:
             self._log(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
             if self.debug:
                 self._log(f"[INIT] Idea: {idea[:100]}...")
+
+            # Record strategy in history for interpretability reporting
+            if idea and fitness is not None:
+                self.idea_history.record_strategy(
+                    iteration=self.generation,
+                    idea=idea,
+                    performance=fitness,
+                    candidate_id=self.candidate_counter,
+                    mutation_type="initial_seed"
+                )
+
             self.candidate_counter += 1
 
         self._log(f"[INIT] Population size: {len(self.population)}")
@@ -575,6 +607,17 @@ class EvolutionLoop:
         if offspring_idea:
             idea_preview = offspring_idea[:100] + "..." if len(offspring_idea) > 100 else offspring_idea
             self._log(f"[OFFSPRING] Idea: {idea_preview}", level="debug")
+
+        # Record strategy in history for interpretability reporting
+        if offspring_idea and fitness is not None:
+            self.idea_history.record_strategy(
+                iteration=self.generation,
+                idea=offspring_idea,
+                performance=fitness,
+                candidate_id=self.candidate_counter,
+                mutation_type=mutation_type
+            )
+
         self.candidate_counter += 1
 
         return offspring
@@ -650,6 +693,10 @@ class EvolutionLoop:
 
             # Survival selection
             self.survival_selection()
+
+            # Report strategy progress (skip iteration 0 - only initial seeds)
+            if self.generation > 0:
+                self._report_strategy_progress()
 
             # Update long-term reflection periodically
             if self.generation % reflection_frequency == 0:
@@ -896,6 +943,62 @@ class EvolutionLoop:
 
         return penalized_fitness
 
+    def _report_strategy_progress(self) -> None:
+        """Generate and display strategy progress report for user interpretability."""
+
+        # Gather current strategies with performance
+        current_strategies = [
+            {
+                "idea": c.get("idea"),
+                "performance": c.get("fitness", 0.0),
+                "candidate_id": c.get("candidate_id")
+            }
+            for c in self.population
+            if c.get("idea") is not None
+        ]
+
+        # Skip if no ideas
+        if not current_strategies:
+            return
+
+        # Get historical context (limit to recent for manageable prompt size)
+        historical_ideas = self.idea_history.get_historical_ideas_with_performance(limit=15)
+
+        # Performance metrics
+        fitnesses = [c["fitness"] for c in self.population]
+        perf_summary = self.idea_history.get_performance_summary()
+
+        performance_metrics = {
+            "best": max(fitnesses),
+            "average": sum(fitnesses) / len(fitnesses),
+            "total_tested": perf_summary.get("total_tested", 0),
+            "improvement": 0.0
+        }
+
+        # Calculate improvement from previous iteration
+        if hasattr(self, '_prev_iteration_best'):
+            performance_metrics["improvement"] = performance_metrics["best"] - self._prev_iteration_best
+
+        self._prev_iteration_best = performance_metrics["best"]
+
+        # Call LLM for analysis
+        analysis = self.llm.analyze_strategy_directions(
+            current_strategies=current_strategies,
+            historical_ideas=historical_ideas,
+            long_term_reflection=self.long_term_reflection,
+            iteration=self.generation,
+            performance_metrics=performance_metrics
+        )
+
+        # Display to user (always visible using reflection logging)
+        self._log_reflection(
+            f"\n{'='*70}\n"
+            f"STRATEGY PROGRESS REPORT - Iteration {self.generation}\n"
+            f"{'='*70}\n"
+            f"{analysis}\n"
+            f"{'='*70}\n"
+        )
+
     def print_final_statistics(self) -> None:
         """Print final evolution statistics (always shown)."""
         best = max(self.population, key=lambda x: x["fitness"])
@@ -932,8 +1035,11 @@ class EvolutionLoop:
 
         self._log(f"\n{'='*80}\n", "info")
 
-    def save_idea_evolution_log(self, log_file: str = "candidates/idea_evolution.md") -> None:
+    def save_idea_evolution_log(self, log_file: str = None) -> None:
         """Save evolution history of ideas for analysis."""
+        if log_file is None:
+            log_file = str(self.candidates_dir / "idea_evolution.md")
+
         with open(log_file, 'w') as f:
             f.write("# Idea Evolution Log\n\n")
             f.write(f"Generated from {len(self.population)} candidates\n\n")

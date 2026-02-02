@@ -570,6 +570,154 @@ REFLECTION:
 """
         return reflection
 
+    def analyze_strategy_directions(self,
+                                    current_strategies: List[Dict[str, any]],
+                                    historical_ideas: List[Dict[str, any]],
+                                    long_term_reflection: Optional[str],
+                                    iteration: int,
+                                    performance_metrics: Dict[str, float]) -> str:
+        """
+        Analyze tested approaches and predict next exploration directions.
+
+        Returns two-part report:
+        - Part 1: Historical performance (what worked vs what didn't)
+        - Part 2: Current directions and next steps
+
+        Args:
+            current_strategies: List of dicts with 'idea', 'performance', 'candidate_id'
+            historical_ideas: List of dicts with 'iteration', 'idea', 'performance', 'improved'
+            long_term_reflection: Current long-term strategic reflection (if available)
+            iteration: Current iteration number
+            performance_metrics: Dict with 'best', 'average', 'improvement', 'total_tested'
+
+        Returns:
+            Natural language summary with two parts using ALNS/CVRP domain terminology
+        """
+        prompt = self._build_strategy_analysis_prompt(
+            current_strategies=current_strategies,
+            historical_ideas=historical_ideas,
+            long_term_reflection=long_term_reflection,
+            iteration=iteration,
+            performance_metrics=performance_metrics
+        )
+
+        if self.use_llm:
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
+                )
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as e:
+                print(f"[LLM ERROR] Strategy analysis failed: {e}")
+                # Fall through to template
+
+        # Template fallback
+        return self._template_strategy_analysis(current_strategies, historical_ideas, performance_metrics)
+
+    def _build_strategy_analysis_prompt(self,
+                                        current_strategies: List[Dict[str, any]],
+                                        historical_ideas: List[Dict[str, any]],
+                                        long_term_reflection: Optional[str],
+                                        iteration: int,
+                                        performance_metrics: Dict[str, float]) -> str:
+        """Build prompt for strategy direction analysis."""
+
+        prompt = f"""You are analyzing ALNS destroy strategy exploration for CVRP at Iteration {iteration}.
+
+=== PERFORMANCE METRICS ===
+- Best solution quality: {performance_metrics.get('best', 0)*100:.2f}%
+- Average quality: {performance_metrics.get('average', 0)*100:.2f}%
+- Improvement this iteration: {performance_metrics.get('improvement', 0)*100:.2f}%
+- Total strategies tested: {performance_metrics.get('total_tested', 0)}
+
+"""
+
+        # Part 1 Data: Historical ideas with performance
+        if historical_ideas:
+            prompt += f"""=== RECENTLY TESTED APPROACHES (Last {len(historical_ideas)}) ===
+"""
+            for item in historical_ideas:
+                status = "✓ IMPROVED" if item.get("improved") else "✗ No improvement"
+                perf = item.get("performance", 0) * 100
+                prompt += f"[Iter {item['iteration']}] {status} ({perf:.2f}%): {item['idea']}\n"
+
+            prompt += "\n"
+
+        # Part 2 Data: Current active strategies
+        prompt += f"""=== CURRENT ACTIVE STRATEGIES ({len(current_strategies)}) ===
+"""
+        for i, strat in enumerate(current_strategies, 1):
+            idea = strat.get("idea", "")
+            perf = strat.get("performance", 0) * 100
+            prompt += f"{i}. [{perf:.2f}%] {idea}\n"
+
+        prompt += "\n"
+
+        # Strategic reflection
+        if long_term_reflection:
+            prompt += f"""=== STRATEGIC INSIGHTS ===
+{long_term_reflection}
+
+"""
+
+        # Instructions for LLM
+        prompt += """=== YOUR TASK ===
+Provide a TWO-PART analysis report using ALNS/CVRP domain language:
+
+**PART 1: Performance of Tested Approaches**
+Summarize in 2-3 sentences:
+- Which strategic approaches (clustering, cost-based selection, spatial coherence, etc.) have been tested
+- Which approaches led to solution quality improvement vs which did not
+- Overall trend (improving, stagnating, exploring)
+
+**PART 2: Current Focus and Next Steps**
+Summarize in 2-3 sentences:
+- What conceptual directions are currently active (categorize the current strategies into 2-3 general approaches)
+- What directions will be explored next (these strategies will be refined and combined)
+- Strategic prediction based on insights
+
+**IMPORTANT LANGUAGE RULES:**
+- Use: "iteration", "strategy", "refine", "combine", "solution quality", "performance", "active strategies"
+- Use: ALNS/CVRP terms (destroy/repair, node selection, route, spatial clustering, cost-based)
+- AVOID: "generation", "population", "mutation", "crossover", "offspring", "fitness", "elite"
+- Write for domain experts who understand CVRP/ALNS but NOT evolutionary algorithms
+
+OUTPUT FORMAT:
+## Part 1: Performance Analysis
+[Your 2-3 sentence analysis here]
+
+## Part 2: Current Focus & Next Steps
+[Your 2-3 sentence analysis here]
+"""
+
+        return prompt
+
+    def _template_strategy_analysis(self,
+                                    current_strategies: List[Dict[str, any]],
+                                    historical_ideas: List[Dict[str, any]],
+                                    performance_metrics: Dict[str, float]) -> str:
+        """Generate template-based strategy analysis when LLM is unavailable."""
+
+        improved_count = sum(1 for h in historical_ideas if h.get("improved", False))
+        total_tested = len(historical_ideas)
+
+        part1 = f"""## Part 1: Performance Analysis
+We have tested {performance_metrics.get('total_tested', 0)} destroy strategies across {total_tested} recent iterations. """
+
+        if improved_count > total_tested * 0.5:
+            part1 += f"Approximately {improved_count}/{total_tested} recent strategies led to solution quality improvement. Overall trend shows steady progress."
+        elif improved_count > 0:
+            part1 += f"Mixed results with {improved_count}/{total_tested} strategies showing improvement. System is actively exploring different approaches."
+        else:
+            part1 += f"Recent strategies have not improved upon best solution. System is in exploration mode seeking new directions."
+
+        part2 = f"""## Part 2: Current Focus & Next Steps
+Currently maintaining {len(current_strategies)} active strategies with best quality at {performance_metrics.get('best', 0)*100:.2f}%. Next iteration will refine these approaches through strategic modifications and combinations. The system will continue exploring variations of successful patterns while maintaining diversity."""
+
+        return f"{part1}\n\n{part2}"
+
     def _build_mutation_prompt(self, parent_code: str, reflection: str, strength: float) -> str:
         """Build mutation prompt."""
         return f"""
