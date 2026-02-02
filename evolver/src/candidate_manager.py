@@ -14,6 +14,7 @@ import json
 import hashlib
 import subprocess
 import re
+from loguru import logger
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -239,7 +240,7 @@ public class {wrapper_class} extends Perturbation {{
         # Check cache
         code_hash = hashlib.sha256(strategy_code.encode()).hexdigest()
         if code_hash in self.cache:
-            print(f"[CACHE HIT] Candidate {candidate_id} matches cached code")
+            logger.debug(f"[CACHE HIT] Candidate {candidate_id} matches cached code")
             cached = self.cache[code_hash].copy()
             cached["candidate_id"] = candidate_id  # Update ID
             return cached
@@ -247,7 +248,7 @@ public class {wrapper_class} extends Perturbation {{
         # Extract class name
         strategy_class = self.extract_class_name(strategy_code)
         if not strategy_class:
-            print(f"[COMPILE ERROR] Could not extract class name from code")
+            logger.warning(f"[COMPILE ERROR] Could not extract class name from code")
             return None
 
         # Create candidate directory
@@ -288,8 +289,8 @@ public class {wrapper_class} extends Perturbation {{
             f.write(result.stdout + result.stderr)
 
         if result.returncode != 0:
-            print(f"[COMPILE ERROR] Candidate {candidate_id} failed to compile")
-            print(f"See: {compile_log}")
+            logger.warning(f"[COMPILE ERROR] Candidate {candidate_id} failed to compile")
+            logger.warning(f"See: {compile_log}")
             return None
 
         # Package JAR
@@ -300,7 +301,7 @@ public class {wrapper_class} extends Perturbation {{
         ], capture_output=True)
 
         if not jar_file.exists():
-            print(f"[JAR ERROR] Failed to create JAR for candidate {candidate_id}")
+            logger.warning(f"[JAR ERROR] Failed to create JAR for candidate {candidate_id}")
             return None
 
         # Save metadata
@@ -335,7 +336,7 @@ public class {wrapper_class} extends Perturbation {{
         self.cache[code_hash] = metadata
         self._save_cache()
 
-        print(f"[COMPILED] Candidate {candidate_id} -> {jar_file}")
+        logger.debug(f"[COMPILED] Candidate {candidate_id} -> {jar_file}")
         return metadata
 
     def get_candidate_info(self, candidate_id: int) -> Optional[Dict[str, Any]]:

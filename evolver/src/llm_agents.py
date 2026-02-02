@@ -14,6 +14,8 @@ API key should be in .env file as GEMINI_API_KEY
 import os
 from typing import Optional, Dict, List, Any
 
+from loguru import logger
+
 # Load environment variables if dotenv is available
 try:
     from dotenv import load_dotenv
@@ -33,8 +35,8 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    print("[WARNING] google-genai not installed. Using template-based generation only.")
-    print("Install with: pip install google-genai")
+    logger.warning("[WARNING] google-genai not installed. Using template-based generation only.")
+    logger.info("Install with: pip install google-genai")
 
 
 class LLMAgents:
@@ -55,16 +57,16 @@ class LLMAgents:
         if self.use_llm:
             api_key = os.getenv("GEMINI_API_KEY")
             if not api_key:
-                print("[WARNING] GEMINI_API_KEY not found in environment.")
-                print("Set it with: export GEMINI_API_KEY=your-key-here")
-                print("Falling back to template-based generation.")
+                logger.warning("[WARNING] GEMINI_API_KEY not found in environment.")
+                logger.info("Set it with: export GEMINI_API_KEY=your-key-here")
+                logger.debug("Falling back to template-based generation.")
                 self.use_llm = False
             else:
                 os.environ["GOOGLE_API_KEY"] = api_key  # New SDK uses GOOGLE_API_KEY
                 self.client = genai.Client()
-                print(f"[LLM] Using Gemini model: {self.model_name}")
+                logger.debug(f"[LLM] Using Gemini model: {self.model_name}")
         else:
-            print("[LLM] Using template-based generation (no API calls)")
+            logger.debug("[LLM] Using template-based generation (no API calls)")
 
         # Constraints that ALL generated code must follow
         self.CONSTRAINTS = """
@@ -211,7 +213,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 mutation_strength=mutation_strength,
                 parent_idea=parent_idea
             )
-            print(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
+            logger.debug(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
         elif long_term_reflection and parent_results:
             # ReEvo reflection-guided mutation
             prompt = ReflectionPrompts.mutation_with_long_term_reflection(
@@ -221,13 +223,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 mutation_strength=mutation_strength,
                 parent_idea=parent_idea
             )
-            print(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
+            logger.debug(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
         else:
             # Basic mutation prompt
             prompt = self._build_mutation_prompt(parent_code, long_term_reflection or "", mutation_strength)
-            print(f"[LLM MUTATION] Using basic mutation (limited reflection)")
+            logger.debug(f"[LLM MUTATION] Using basic mutation (limited reflection)")
 
-        print(f"[LLM MUTATION] Prompt length: {len(prompt)} chars")
+        logger.debug(f"[LLM MUTATION] Prompt length: {len(prompt)} chars")
 
         if self.use_llm:
             try:
@@ -237,15 +239,15 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 idea, code = self._extract_idea_and_code(response.text)
                 if idea is None or code is None:
-                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
-                    print("[LLM] Falling back to template mutation")
+                    logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    logger.warning("[LLM] Falling back to template mutation")
                     fallback_idea = f"Mutated version of parent strategy ({mutation_type or 'generic'} mutation)."
                     return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
-                print(f"[LLM MUTATION] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                logger.debug(f"[LLM MUTATION] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
                 return idea, code
             except Exception as e:
-                print(f"[LLM ERROR] Mutation failed: {e}")
-                print("[LLM] Falling back to template mutation")
+                logger.error(f"[LLM ERROR] Mutation failed: {e}")
+                logger.warning("[LLM] Falling back to template mutation")
                 fallback_idea = "Mutated version of parent strategy."
                 return fallback_idea, self._add_mutation_comment(parent_code, "MUTATED")
         else:
@@ -297,7 +299,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 elite_idea=parent1_idea,
                 non_elite_idea=parent2_idea
             )
-            print(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
+            logger.debug(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
         elif short_term_reflection:
             # ReEvo reflection-guided crossover
             prompt = ReflectionPrompts.crossover_with_short_term_reflection(
@@ -307,13 +309,13 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 parent1_idea=parent1_idea,
                 parent2_idea=parent2_idea
             )
-            print(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
+            logger.debug(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
         else:
             # Basic crossover prompt
             prompt = self._build_crossover_prompt(parent1_code, parent2_code)
-            print(f"[LLM CROSSOVER] Using basic crossover (no reflection)")
+            logger.debug(f"[LLM CROSSOVER] Using basic crossover (no reflection)")
 
-        print(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars")
+        logger.debug(f"[LLM CROSSOVER] Prompt length: {len(prompt)} chars")
 
         if self.use_llm:
             try:
@@ -323,15 +325,15 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 idea, code = self._extract_idea_and_code(response.text)
                 if idea is None or code is None:
-                    print("[LLM ERROR] Failed to parse IDEA and CODE sections")
-                    print("[LLM] Falling back to template crossover")
+                    logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
+                    logger.warning("[LLM] Falling back to template crossover")
                     fallback_idea = "Crossover offspring combining features from both parents."
                     return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
-                print(f"[LLM CROSSOVER] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
+                logger.debug(f"[LLM CROSSOVER] Generated idea ({len(idea)} chars) and code ({len(code)} chars)")
                 return idea, code
             except Exception as e:
-                print(f"[LLM ERROR] Crossover failed: {e}")
-                print("[LLM] Falling back to template crossover")
+                logger.error(f"[LLM ERROR] Crossover failed: {e}")
+                logger.warning("[LLM] Falling back to template crossover")
                 fallback_idea = "Crossover offspring from parents."
                 return fallback_idea, self._add_mutation_comment(parent1_code, "CROSSOVER")
         else:
@@ -375,7 +377,7 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Short-term reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Short-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -443,7 +445,7 @@ Consider combining the superior selection criteria with complementary diversific
         truncated_bullets = sum(1 for line in result_lines if line.strip().startswith('-') or line.strip().startswith('*'))
 
         if truncated_bullets < original_bullets:
-            print(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
+            logger.debug(f"[REFLECTION] Truncated reflection from {original_bullets} to {truncated_bullets} bullets (max {max_bullets} per section)")
 
         return truncated
 
@@ -482,7 +484,7 @@ Consider combining the superior selection criteria with complementary diversific
                 )
                 reflection = response.text
             except Exception as e:
-                print(f"[LLM ERROR] Long-term reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Long-term reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -558,7 +560,7 @@ Keep it concise and actionable.
                 )
                 return response.text
             except Exception as e:
-                print(f"[LLM ERROR] Reflection failed: {e}")
+                logger.error(f"[LLM ERROR] Reflection failed: {e}")
                 # Fall through to template
 
         # Template reflection as fallback
@@ -648,11 +650,11 @@ Return only the complete Java class code, no explanations, no markdown.
         code_match = re.search(r'##\s*CODE\s*\n```java\s*\n(.*?)\n```', llm_response, re.DOTALL | re.IGNORECASE)
 
         if not idea_match or not code_match:
-            print("[PARSE ERROR] Missing IDEA or CODE section in LLM response")
+            logger.error("[PARSE ERROR] Missing IDEA or CODE section in LLM response")
             # Try fallback: maybe LLM only provided code
             code_fallback = self._extract_java_code(llm_response)
             if code_fallback and len(code_fallback) > 50:  # Valid code found
-                print("[PARSE FALLBACK] Found code without IDEA section, using placeholder idea")
+                logger.warning("[PARSE FALLBACK] Found code without IDEA section, using placeholder idea")
                 return ("LLM-generated strategy without explicit idea description.", code_fallback)
             return None, None
 

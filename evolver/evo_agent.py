@@ -20,6 +20,8 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from evolution_loop import EvolutionLoop
 
+from loguru import logger
+
 
 def load_config(config_path: str = None) -> dict:
     """
@@ -37,14 +39,14 @@ def load_config(config_path: str = None) -> dict:
         config_path = Path(config_path)
 
     if not config_path.exists():
-        print(f"[CONFIG] Config file not found: {config_path}")
-        print(f"[CONFIG] Using default configuration")
+        logger.warning(f"[CONFIG] Config file not found: {config_path}")
+        logger.warning(f"[CONFIG] Using default configuration")
         return get_default_config()
 
     with open(config_path) as f:
         config = json.load(f)
 
-    print(f"[CONFIG] Loaded configuration from: {config_path}")
+    logger.info(f"[CONFIG] Loaded configuration from: {config_path}")
     return config
 
 
@@ -81,37 +83,35 @@ def get_default_config() -> dict:
     }
 
 
-def print_config(config: dict, debug: bool = True):
+def print_config(config: dict):
     """Print configuration summary."""
-    if not debug:
-        # Minimal output when debug is off
-        print(f"\n[CONFIG] {config.get('experiment_name', 'unnamed')} | "
-              f"{config['num_generations']} gens | "
-              f"resume={config.get('resume', False)}")
-        return
+    # Minimal output when debug is off
+    logger.info(f"[CONFIG] {config.get('experiment_name', 'unnamed')} | "
+            f"{config['num_generations']} gens | "
+            f"resume={config.get('resume', False)}")
 
-    print("\n" + "="*80)
-    print("EVOLUTION CONFIGURATION")
-    print("="*80)
-    print(f"  Experiment: {config.get('experiment_name', 'unnamed')}")
-    print(f"  Dataset: {config['dataset_dir']}")
-    print(f"  Instances: {config['target_instances']}")
-    print(f"  Population: {config['population_size']} (elite ratio: {config['elite_ratio']})")
-    print(f"  Generations: {config['num_generations']} (seeds: {config['num_seeds']})")
-    print(f"  Mutation/Crossover: {config['mutation_rate']:.0%}/{config['crossover_rate']:.0%}")
-    print(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config['code_length_penalty_alpha']})")
-    print(f"  Random seed: {config['seed']}")
-    print(f"  Resume: {config.get('resume', False)}")
-    print(f"  Debug output: {config.get('debug', True)}")
+    logger.debug("="*80)
+    logger.debug("EVOLUTION CONFIGURATION")
+    logger.debug("="*80)
+    logger.debug(f"  Experiment: {config.get('experiment_name', 'unnamed')}")
+    logger.debug(f"  Dataset: {config['dataset_dir']}")
+    logger.debug(f"  Instances: {config['target_instances']}")
+    logger.debug(f"  Population: {config['population_size']} (elite ratio: {config['elite_ratio']})")
+    logger.debug(f"  Generations: {config['num_generations']} (seeds: {config['num_seeds']})")
+    logger.debug(f"  Mutation/Crossover: {config['mutation_rate']:.0%}/{config['crossover_rate']:.0%}")
+    logger.debug(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config['code_length_penalty_alpha']})")
+    logger.debug(f"  Random seed: {config['seed']}")
+    logger.debug(f"  Resume: {config.get('resume', False)}")
+    logger.debug(f"  Debug output: {config.get('debug', True)}")
     if config.get('user_insight'):
-        print(f"  User insight: {config['user_insight'][:50]}...")
-    print("="*80 + "\n")
+        logger.debug(f"  User insight: {config['user_insight'][:50]}...")
+    logger.debug("="*80)
 
 
 def clean_candidates_folder(candidates_dir: Path):
     """Remove existing candidates folder for fresh start."""
     if candidates_dir.exists():
-        print(f"[CLEAN] Removing existing candidates folder: {candidates_dir}")
+        logger.debug(f"[CLEAN] Removing existing candidates folder: {candidates_dir}")
         shutil.rmtree(candidates_dir)
     candidates_dir.mkdir(exist_ok=True)
 
@@ -127,7 +127,7 @@ def run_evolution(config: dict):
     debug = config.get("debug", True)
     user_insight = config.get("user_insight", "")
 
-    print_config(config, debug)
+    print_config(config)
 
     # Determine candidates directory
     project_root = Path(__file__).parent
@@ -155,19 +155,19 @@ def run_evolution(config: dict):
 
     # Initialize or resume population
     if resume:
-        print(f"[PHASE 1] Attempting to resume from existing candidates...")
+        logger.debug(f"[PHASE 1] Attempting to resume from existing candidates...")
         resumed = evolution.resume_from_candidates()
         if not resumed:
-            print(f"[PHASE 1] Resume failed, initializing fresh population with {config['num_seeds']} seeds...")
+            logger.debug(f"[PHASE 1] Resume failed, initializing fresh population with {config['num_seeds']} seeds...")
             evolution.initialize_population(num_seeds=config["num_seeds"])
     else:
         if debug:
-            print(f"[PHASE 1] Initializing population with {config['num_seeds']} seeds...")
+            logger.debug(f"[PHASE 1] Initializing population with {config['num_seeds']} seeds...")
         evolution.initialize_population(num_seeds=config["num_seeds"])
 
     # Run evolution
     if debug:
-        print(f"\n[PHASE 2] Running {config['num_generations']} generations...")
+        logger.debug(f"[PHASE 2] Running {config['num_generations']} generations...")
     evolution.evolve(
         num_generations=config["num_generations"],
         reflection_frequency=config["reflection_frequency"]
@@ -187,6 +187,8 @@ Examples:
     python evo_agent.py -c experiments/exp1.json
     python evo_agent.py --resume             # Resume from existing candidates
     python evo_agent.py --no-debug           # Minimal output (reflections + best only)
+    python evo_agent.py -v/-vv               # Enable verbose/extra-verbose logs
+    python evo_agent.py --log_path log.out   # Path for writing log file
         """
     )
     parser.add_argument(
@@ -211,8 +213,37 @@ Examples:
         action="store_true",
         help="Minimal output: only reflections and best candidate per generation"
     )
-
+    parser.add_argument(
+        "-v", "--verbose",
+        action="count", default=0,
+        help="Verbosity level ('-v' == DEBUG, '-vv' == TRACE)"
+    )
+    parser.add_argument(
+        "--log_path",
+        action="store",
+        help="Path to log file. If empty, no log file is generated.",
+        type=str
+    )
     args = parser.parse_args()
+
+    # Remove default logger and add a customized one
+    logger.remove()
+    log_level = "INFO"
+    if args.verbose == 1:
+        log_level = "DEBUG"
+    elif args.verbose >= 2:
+        log_level = "TRACE"
+
+    logger.add(
+        sys.stderr,
+        format="<level>{level: <8}</level> | <level>{message}</level>",
+        level=log_level
+    )
+    if args.log_path is not None:
+        logger.add(args.log_path,
+            format="<level>{level: <8}</level> | <level>{message}</level>",
+            rotation="10 MB"
+        )
 
     # Determine config path
     config_path = args.config_flag or args.config
@@ -228,13 +259,13 @@ Examples:
 
     try:
         evolution = run_evolution(config)
-        print("\n[DONE] Evolution completed successfully!")
+        logger.success("[DONE] Evolution completed successfully!")
         return 0
     except KeyboardInterrupt:
-        print("\n[INTERRUPTED] Evolution stopped by user")
+        logger.warning("[INTERRUPTED] Evolution stopped by user")
         return 1
     except Exception as e:
-        print(f"\n[ERROR] Evolution failed: {e}")
+        logger.error(f"[ERROR] Evolution failed: {e}")
         import traceback
         traceback.print_exc()
         return 2
