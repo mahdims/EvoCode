@@ -45,4 +45,25 @@ Invoke the `evolve/evolution-params` subskill to gather the evolution loop param
 
 If a user interrupts the execution of the `evo_agent.py` script, we should update the parameter file to set `"resume": true` and to update `user_insight` to contain the insight provided by the user after interrupting.
 
-If the default parameters were used, create a copy of the `/app/evolver/config.json`, and make the corresponding updates there (i.e set `"resume": true` and `user_insight`).
+If the default parameters were used, create a copy of the `/app/evolver/config.json`, and make the corresponding updates there (i.e set `"resume": true` and `user_insight`). The user insight needs to be provided as JSON data:
+
+```json
+{
+    "user_insight": [
+        {
+            "type": "initialize",
+            "idea": "Use demand-based clustering to remove high-demand nodes together"
+        },
+        {
+            "type": "mutate",
+            "idea": "Add adaptive threshold based on omega size",
+            "related_population": [0]
+        },
+        {
+            "type": "crossover",
+            "idea": "Combine KNN clustering from first parent with cost-based selection from second",
+            "related_population": [0, 1]
+        }
+    ]
+}
+```
