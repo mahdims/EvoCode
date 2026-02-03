@@ -40,3 +40,9 @@ Invoke the `evolve/evolution-params` subskill to gather the evolution loop param
 2. Present a **Summary Table** of the "Evolution Loop" JSON parameter values from the file in Step 2.
 3. Ask for a final "Confirm" before proceeding. Ask for confirmation by offering options for `Accept`, and a user-supplied input to `Update`.
 4. Once confirmed, run: `python3 -u /app/evolver/evo_agent.py --verbose <JSON file from Step 2, if not default>` **CRITICAL: This is a long-running process. You MUST stay attached to the process and report progress updates as they appear in the logs. Do not background this task.**
+
+### User Interrupts
+
+If a user interrupts the execution of the `evo_agent.py` script, we should update the parameter file to set `"resume": true` and to update `user_insight` to contain the insight provided by the user after interrupting.
+
+If the default parameters were used, create a copy of the `/app/evolver/config.json`, and make the corresponding updates there (i.e set `"resume": true` and `user_insight`).

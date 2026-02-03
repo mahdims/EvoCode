@@ -240,7 +240,7 @@ class EvolutionLoop:
                         mutation_type=c.get("mutation_type", "unknown")
                     )
 
-            self._log(f"[RESUME] Rebuilt idea history with {len(self.idea_history.history)} strategies", "info")
+            logger.info(f"[RESUME] Rebuilt idea history with {len(self.idea_history.history)} strategies")
 
         return True
 
@@ -499,7 +499,7 @@ class EvolutionLoop:
             List of new candidate dicts (may be empty if all generations failed)
         """
         if not self.user_insight:
-            self._log("[USER_INSIGHT] No user insight provided")
+            logger.debug("[USER_INSIGHT] No user insight provided")
             return []
 
         # Parse user_insight if it's a string (JSON)
@@ -507,43 +507,43 @@ class EvolutionLoop:
             try:
                 insights = json.loads(self.user_insight)
             except json.JSONDecodeError as e:
-                self._log(f"[USER_INSIGHT] Failed to parse user_insight as JSON: {e}")
+                logger.debug(f"[USER_INSIGHT] Failed to parse user_insight as JSON: {e}")
                 return []
         else:
             insights = self.user_insight
 
         # Ensure insights is a list
         if not isinstance(insights, list):
-            self._log("[USER_INSIGHT] user_insight should be a list of insight dicts")
+            logger.debug("[USER_INSIGHT] user_insight should be a list of insight dicts")
             return []
 
         if not insights:
-            self._log("[USER_INSIGHT] Empty user_insight list")
+            logger.debug("[USER_INSIGHT] Empty user_insight list")
             return []
 
-        self._log(f"[USER_INSIGHT] Processing {len(insights)} user insights")
+        logger.debug(f"[USER_INSIGHT] Processing {len(insights)} user insights")
 
         # Build candidate lookup from population
         id_to_candidate = {c["candidate_id"]: c for c in self.population}
 
         offspring_list = []
         for i, insight in enumerate(insights):
-            self._log(f"\n[USER_INSIGHT] Processing insight {i + 1}/{len(insights)}")
+            logger.debug(f"\n[USER_INSIGHT] Processing insight {i + 1}/{len(insights)}")
 
             # Validate required fields
             insight_type = insight.get("type")
             idea = insight.get("idea")
 
             if not insight_type:
-                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'type' field, skipping")
+                logger.debug(f"[USER_INSIGHT] Insight {i}: Missing 'type' field, skipping")
                 continue
             if not idea:
-                self._log(f"[USER_INSIGHT] Insight {i}: Missing 'idea' field, skipping")
+                logger.debug(f"[USER_INSIGHT] Insight {i}: Missing 'idea' field, skipping")
                 continue
 
             valid_types = ["initialize", "mutate", "crossover"]
             if insight_type not in valid_types:
-                self._log(f"[USER_INSIGHT] Insight {i}: Invalid type '{insight_type}', skipping")
+                logger.debug(f"[USER_INSIGHT] Insight {i}: Invalid type '{insight_type}', skipping")
                 continue
 
             # Get related population candidate IDs
@@ -556,28 +556,28 @@ class EvolutionLoop:
                     if cid in id_to_candidate:
                         related_candidates.append(id_to_candidate[cid])
                     else:
-                        self._log(f"[USER_INSIGHT] Warning: candidate_id {cid} not found in population")
+                        logger.debug(f"[USER_INSIGHT] Warning: candidate_id {cid} not found in population")
 
             # Validate related_candidates based on type
             if insight_type == "initialize":
                 if related_candidates:
-                    self._log(f"[USER_INSIGHT] Insight {i}: 'initialize' type ignores related_population")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: 'initialize' type ignores related_population")
                 related_candidates = None
             elif insight_type == "mutate":
                 if not related_candidates:
-                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' requires one candidate, skipping")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: 'mutate' requires one candidate, skipping")
                     continue
                 if len(related_candidates) > 1:
-                    self._log(f"[USER_INSIGHT] Insight {i}: 'mutate' expects one candidate, using first")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: 'mutate' expects one candidate, using first")
                 related_candidates = [related_candidates[0]]
             elif insight_type == "crossover":
                 if len(related_candidates) < 2:
-                    self._log(f"[USER_INSIGHT] Insight {i}: 'crossover' requires 2+ candidates, skipping")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: 'crossover' requires 2+ candidates, skipping")
                     continue
 
-            self._log(f"[USER_INSIGHT] Insight {i}: type='{insight_type}', idea='{idea[:50]}...'")
+            logger.debug(f"[USER_INSIGHT] Insight {i}: type='{insight_type}', idea='{idea[:50]}...'")
             if related_candidates:
-                self._log(f"[USER_INSIGHT] Insight {i}: Related candidates: {[c['candidate_id'] for c in related_candidates]}")
+                logger.debug(f"[USER_INSIGHT] Insight {i}: Related candidates: {[c['candidate_id'] for c in related_candidates]}")
 
             # Generate using LLM with user insight
             try:
@@ -602,15 +602,15 @@ class EvolutionLoop:
 
                 if offspring:
                     offspring_list.append(offspring)
-                    self._log(f"[USER_INSIGHT] Insight {i}: Successfully generated candidate {offspring['candidate_id']}")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: Successfully generated candidate {offspring['candidate_id']}")
                 else:
-                    self._log(f"[USER_INSIGHT] Insight {i}: Failed to compile/evaluate offspring")
+                    logger.debug(f"[USER_INSIGHT] Insight {i}: Failed to compile/evaluate offspring")
 
             except Exception as e:
-                self._log(f"[USER_INSIGHT] Insight {i}: Error during generation: {e}")
+                logger.debug(f"[USER_INSIGHT] Insight {i}: Error during generation: {e}")
                 continue
 
-        self._log(f"\n[USER_INSIGHT] Generated {len(offspring_list)} offspring from {len(insights)} insights")
+        logger.debug(f"\n[USER_INSIGHT] Generated {len(offspring_list)} offspring from {len(insights)} insights")
         return offspring_list
 
     def _mutate_with_long_term_reflection(self) -> Optional[Dict[str, Any]]:
@@ -798,13 +798,13 @@ class EvolutionLoop:
 
         # Process user insights before main evolution loop
         if self.user_insight:
-            self._log(f"\n{'='*80}", "info")
-            self._log(f"PROCESSING USER INSIGHTS", "info")
-            self._log(f"{'='*80}", "info")
+            logger.info(f"\n{'='*80}")
+            logger.info(f"PROCESSING USER INSIGHTS")
+            logger.info(f"{'='*80}")
             user_offspring = self._generate_with_user_insight()
             for offspring in user_offspring:
                 self.population.append(offspring)
-            self._log(f"[USER_INSIGHT] Added {len(user_offspring)} candidates to population", "info")
+            logger.info(f"[USER_INSIGHT] Added {len(user_offspring)} candidates to population")
             # Apply survival selection if population exceeds limit
             if len(self.population) > self.population_size:
                 self.survival_selection()
