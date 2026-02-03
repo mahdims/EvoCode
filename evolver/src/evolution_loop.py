@@ -132,6 +132,7 @@ class EvolutionLoop:
         from idea_history_tracker import IdeaHistoryTracker
         self.idea_history = IdeaHistoryTracker()
         self._prev_iteration_best = 0.0  # Track improvement trends
+        self._generation_start_counter = 0  # Track candidates tested per generation
 
         random.seed(seed)
 
@@ -140,7 +141,7 @@ class EvolutionLoop:
         import os
         if self.instance_workers == "auto":
             # Reserve 1 core for system/monitoring tasks
-            cpu_count = max(1, (os.cpu_count() or 4) - 1)
+            cpu_count = max(1, (os.cpu_count()))
             workers = max(1, cpu_count // self.num_workers)
             # Cap at number of target instances
             return min(workers, len(self.target_instances))
@@ -814,6 +815,9 @@ class EvolutionLoop:
             logger.info(f"GENERATION {self.generation}")
             logger.info(f"{'='*80}")
 
+            # Track candidates at start of generation for statistics
+            self._generation_start_counter = self.candidate_counter
+
             # Generate offspring using work-stealing pipeline
             num_offspring = self.population_size - self.elite_size
             offspring_list = self._evolve_generation_batch(num_offspring)
@@ -1118,7 +1122,8 @@ class EvolutionLoop:
 
         # Print final section
         if current_section and section_items:
-            logger.info(f"\n{current_section}")
+            logger.info(f" ")
+            logger.info(f"{current_section}")
             logger.info("-" * 60)
             for item in section_items:
                 logger.info(f"  {item}")
@@ -1135,25 +1140,30 @@ class EvolutionLoop:
         avg_fitness = sum(fitnesses) / len(fitnesses)
 
         # Count variations tested
-        # This generation: count strategies recorded in current iteration
-        gen_tested = sum(1 for record in self.idea_history.history if record.iteration == self.generation)
+        # This generation: calculate from candidate_counter difference
+        gen_tested = self.candidate_counter - self._generation_start_counter
 
-        # Total tested: get from performance summary
-        perf_summary = self.idea_history.get_performance_summary()
-        total_tested = perf_summary.get("total_tested", 0)
+        # Total tested: all candidates created so far
+        total_tested = self.candidate_counter
 
         # Report using logger.info
-        logger.info(f"  Iteration [{self.generation}] Statistics:")
-        logger.info(f"  Code variations tested this iteration: {gen_tested}")
-        logger.info(f"  Code variations tested total: {total_tested}")
+        logger.info("")
+        logger.info("-" * 80)
+        logger.info(f"Generation {self.generation} - Statistics Summary")
+        logger.info("-" * 80)
+        logger.info(f"  Candidates tested this generation: {gen_tested}")
+        logger.info(f"  Total candidates tested: {total_tested}")
         logger.info(f"  Best solution: ID={best['candidate_id']}, fitness={best['fitness']*100:.4f}%")
 
         # Show best idea on new line
         best_idea = best.get('idea', 'N/A')
+        if len(best_idea) > 120:
+            best_idea = best_idea[:117] + "..."
         logger.info(f"  Best idea: {best_idea}")
 
         logger.info(f"  Worst solution: ID={worst['candidate_id']}, fitness={worst['fitness']*100:.4f}%")
         logger.info(f"  Average population fitness: {avg_fitness*100:.4f}%")
+        logger.info("-" * 80)
 
     def _report_strategy_progress(self) -> None:
         """Generate and display strategy progress report for user interpretability."""
@@ -1215,7 +1225,7 @@ class EvolutionLoop:
         """Print final evolution statistics (always shown)."""
         best = max(self.population, key=lambda x: x["fitness"])
 
-        logger.info(f"\n{'='*80}")
+        logger.info(f"{'='*80}")
         logger.info(f"FINAL STATISTICS")
         logger.info(f"{'='*80}")
         logger.info(f"Total candidates evaluated: {self.candidate_counter}")
@@ -1228,10 +1238,11 @@ class EvolutionLoop:
 
         # Show best candidate's idea
         if best.get("idea"):
-            logger.info(f"\nBest candidate idea:")
+            logger.info(f"")
+            logger.info(f"Best candidate idea:")
             logger.info(f"  {best['idea']}")
 
-        logger.info(f"\nBest candidate performance:")
+        logger.info(f"Best candidate performance:")
         for result in best["eval_results"]:
             instance_name = result.get('instance', result.get('name', 'unknown'))
             improvement = result.get('improvement', result.get('improvement_pct', 0) / 100)
@@ -1243,7 +1254,7 @@ class EvolutionLoop:
                             if l.strip() and not l.strip().startswith('//')
                             and not l.strip().startswith('package')
                             and not l.strip().startswith('import')])
-            logger.info(f"\nBest candidate code length: {code_lines} lines")
+            logger.info(f"Best candidate code length: {code_lines} lines")
 
         logger.info(f"\n{'='*80}\n")
 

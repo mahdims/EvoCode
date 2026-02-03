@@ -15,7 +15,7 @@
     "use_vrpagent": true,
     "code_length_penalty_alpha": 0.0,
     "seed": 42,
-    "max_parallel_evals": 4,
+    "max_parallel_evals": 6,
     "resume": false,
     "debug": true,
     "user_insight": ""
