@@ -226,12 +226,22 @@ Examples:
     )
     args = parser.parse_args()
 
+    # Determine config path
+    config_path = args.config_flag or args.config
+
+    # Load config
+    config = load_config(config_path)
+
     # Remove default logger and add a customized one
     logger.remove()
+
+    # Determine verbosity: command-line args take precedence over config
+    verbosity = args.verbose if args.verbose > 0 else config.get("verbose", 0)
+
     log_level = "INFO"
-    if args.verbose == 1:
+    if verbosity == 1:
         log_level = "DEBUG"
-    elif args.verbose >= 2:
+    elif verbosity >= 2:
         log_level = "TRACE"
 
     logger.add(
@@ -244,12 +254,6 @@ Examples:
             format="<level>{level: <8}</level> | <level>{message}</level>",
             rotation="10 MB"
         )
-
-    # Determine config path
-    config_path = args.config_flag or args.config
-
-    # Load config
-    config = load_config(config_path)
 
     # Command line overrides
     if args.resume:

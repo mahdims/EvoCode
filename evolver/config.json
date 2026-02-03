@@ -9,14 +9,15 @@
     "reflection_frequency": 2,
     "dataset_dir": "Vrp_Set_X",
     "target_instances": [
-        "X-n101-k25",
-        "X-n106-k14"
+        "X-n266-k58",
+        "X-n143-k7",
+        "X-n139-k10"
     ],
     "use_vrpagent": true,
     "code_length_penalty_alpha": 0.0,
     "seed": 42,
     "max_parallel_evals": 6,
     "resume": false,
-    "debug": true,
+    "verbose": 1,
     "user_insight": ""
 }
