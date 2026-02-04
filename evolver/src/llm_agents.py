@@ -16,6 +16,9 @@ from typing import Optional, Dict, List, Any
 
 from loguru import logger
 
+GEMINI_PROVIDERS = ["google", "gemini"]
+OPENAI_PROVIDERS = ["openai", "modelarts"]
+
 # Load environment variables if dotenv is available
 try:
     from dotenv import load_dotenv
@@ -37,11 +40,18 @@ except ImportError:
     GEMINI_AVAILABLE = False
     logger.warning("[WARNING] google-genai not installed. Using template-based generation only.")
 
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.warning("[WARNING] openai not installed. Using template-based generation only.")
+    logger.info("Install with: pip install openai")
 
 class LLMAgents:
     """LLM-powered agents for evolutionary operators."""
 
-    def __init__(self, model: Optional[str] = None, use_llm: bool = True):
+    def __init__(self, model: Optional[str] = None, use_llm: bool = True, provider = "gemini"):
         """
         Initialize LLM agents.
 
@@ -49,21 +59,13 @@ class LLMAgents:
             model: Gemini model to use (defaults to gemini-2.0-flash-exp)
             use_llm: Whether to use LLM or template-based generation
         """
-        self.use_llm = use_llm and GEMINI_AVAILABLE
-        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+        self.use_llm = use_llm
+        self.model_name = model
         self.client = None
+        self.provider = provider.lower()
 
         if self.use_llm:
-            api_key = os.getenv("GEMINI_API_KEY")
-            if not api_key:
-                logger.warning("[WARNING] GEMINI_API_KEY not found in environment.")
-                logger.warning("Set it with: export GEMINI_API_KEY=your-key-here")
-                logger.debug("Falling back to template-based generation.")
-                self.use_llm = False
-            else:
-                os.environ["GOOGLE_API_KEY"] = api_key  # New SDK uses GOOGLE_API_KEY
-                self.client = genai.Client()
-                logger.debug(f"[LLM] Using Gemini model: {self.model_name}")
+            self._initialize_client()
         else:
             logger.debug("[LLM] Using template-based generation (no API calls)")
 
@@ -143,6 +145,83 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 }
 ```
 """
+
+    def _initialize_client(self) -> None:
+        """Internal helper to setup the specific provider"""
+        try:
+            if self.provider in GEMINI_PROVIDERS:
+                self._setup_gemini()
+            elif self.provider in ["openai", "modelarts"]:
+                self._setup_openai_compatible()
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
+        except Exception as e:
+            logger.warning(f"[WARNING] LLM Setup failed: {e}. Falling back to templates.")
+            self.use_llm = False
+
+
+    def _setup_gemini(self) -> None:
+        if not GEMINI_AVAILABLE:
+            raise ImportError("Gemini SDK not installed.")
+
+        self.model_name = self.model_name or os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.warning("[WARNING] GEMINI_API_KEY not found in environment.")
+            logger.info("Set it with: export GEMINI_API_KEY=your-key-here")
+            logger.debug("Falling back to template-based generation.")
+            self.use_llm = False
+        else:
+            os.environ["GOOGLE_API_KEY"] = api_key  # New SDK uses GOOGLE_API_KEY
+            self.client = genai.Client()
+            logger.debug(f"[LLM] Using Gemini model: {self.model_name}")
+
+
+    def _setup_openai_compatible(self) -> None:
+        if not OPENAI_AVAILABLE:
+            raise ImportError("OpenAI SDK not installed.")
+
+        api_key = os.getenv("MODELARTS_API_KEY")
+        base_url = os.getenv("MODELARTS_BASE_URL", "https://api.modelarts-maas.com/v1")
+        if not api_key:
+            logger.warning("[WARNING] MODELARTS_API_KEY not found in environment.")
+            logger.info("Set it with: export MODELARTS_API_KEY=your-key-here")
+            logger.debug("Falling back to template-based generation.")
+            self.use_llm = False
+        else:
+            self.model_name = self.model_name or os.getenv("MODELARTS_MODEL", "qwen3-coder-480b-a35b-instruct")
+            self.client = OpenAI(api_key=api_key, base_url=base_url)
+            logger.debug(f"[LLM] Using OpenAI-compatible model: {self.model_name}")
+
+    def _generate_content(self, prompt):
+        if self.provider in GEMINI_PROVIDERS:
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+        else:
+            assert self.provider in OPENAI_PROVIDERS
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=self._convert_prompt(prompt)
+            )
+        return response
+
+    def _get_response_text(self, response) -> str:
+        if self.provider in GEMINI_PROVIDERS:
+            text = response.text
+        else:
+            assert self.provider in OPENAI_PROVIDERS
+            text = response.choices[0].message.content
+        return text
+
+    def _convert_prompt(self, prompt) -> List[Dict[str, str]]:
+        if isinstance(prompt, str):
+            return [{"role": "user", "content": prompt}]
+
+        if isinstance(prompt, list) and all(isinstance(x, str) for x in prompt):
+            return [{"role": "user", "content": " ".join(prompt)}]
 
     def generate_initial_seed(self, seed_id: int) -> tuple:
         """
@@ -232,11 +311,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                idea, code = self._extract_idea_and_code(response.text)
+                response = self._generate_content(prompt)
+                idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if idea is None or code is None:
                     logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
                     logger.warning("[LLM] Falling back to template mutation")
@@ -318,11 +394,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                idea, code = self._extract_idea_and_code(response.text)
+                response = self._generate_content(prompt)
+                idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if idea is None or code is None:
                     logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
                     logger.warning("[LLM] Falling back to template crossover")
@@ -380,11 +453,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                generated_idea, code = self._extract_idea_and_code(response.text)
+                response = self._generate_content(prompt)
+                generated_idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if generated_idea is None or code is None:
                     logger.debug("[LLM ERROR] Failed to parse IDEA and CODE sections")
                     logger.debug("[LLM] Falling back to template generation")
@@ -432,11 +502,8 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                return response.text
+                response = self._generate_content(prompt)
+                return self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Short-term reflection failed: {e}")
                 # Fall through to template
@@ -539,11 +606,8 @@ Consider combining the superior selection criteria with complementary diversific
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                reflection = response.text
+                response = self._generate_content(prompt)
+                reflection = self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Long-term reflection failed: {e}")
                 # Fall through to template
@@ -599,11 +663,8 @@ Keep it concise and actionable.
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                return response.text
+                response = self._generate_content(prompt)
+                return self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Reflection failed: {e}")
                 # Fall through to template
@@ -650,12 +711,9 @@ REFLECTION:
 
         if self.use_llm:
             try:
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt
-                )
-                if response and response.text:
-                    return response.text.strip()
+                response = self._generate_content(prompt)
+                if response and self._get_response_text(response):
+                    return self._get_response_text(response).strip()
             except Exception as e:
                 logger.warning(f"[LLM ERROR] Strategy analysis failed: {e}")
                 # Fall through to template
