@@ -20,7 +20,7 @@ The calling skill may pass evaluator information:
 ## Step 1: Parameter Source
 
 Offer the following options:
-- `Use default` - Use `evolver/config.json` as base
+- `Use default` - Use `/app/evolver/config.json` as base
 - `Path to parameter file` - User provides path to existing JSON
 - `Configure manually` - Ask for key parameters interactively
 

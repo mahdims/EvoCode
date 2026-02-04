@@ -16,7 +16,7 @@ services:
     command: ["--config", "/app/config.yaml"]
 
   claude-code:
-    image: claude-code-evo:latest
+    build: .
     container_name: evo-code
     networks:
       - evocode-network
@@ -27,20 +27,36 @@ services:
       ANTHROPIC_AUTH_TOKEN: ${MODELARTS_API_KEY}
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: 1
       COLORTERM: truecolor
-      TARGET_MODEL_NAME: ${MODELARTS_MODEL}
       MODELARTS_API_KEY: ${MODELARTS_API_KEY}
       MODELARTS_MODEL: ${MODELARTS_MODEL}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       GEMINI_MODEL: ${GEMINI_MODEL}
-      PYTHONPATH: /app/evolver/src
     volumes:
       # For now, we will just use the raw source; but we should package and install EvoCode in the long-term
+      #   -> This allows editing evocode without rebuilding container
       - ./:/app
       - ./.claude:/app/.claude
+      - evo_data:/data
     command: claude
     depends_on:
-      - litellm
+      - litellm # For proxying modelarts through CC
+      # Run front end with claude-code, we will run claude-code interactively, so we depend on FE
+      - frontend
+
+  frontend:
+    build: ./ui/frontend
+    container_name: evo_dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - evo_data:/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
 
 networks:
   evocode-network:
     driver: bridge
+
+volumes:
+  evo_data:

@@ -13,5 +13,9 @@ openai>=2.16.0
 # For logging
 loguru
 
+# Graph plots - for backend data
+networkx
+numpy
+
 # Note: Java JDK 11+ is also required for compiling generated strategies
 # Install via: apt install default-jdk (Linux) or download from Oracle/Adoptium
