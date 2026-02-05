@@ -18,7 +18,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from evolution_loop import EvolutionLoop
+from evolution_loop import EvolutionLoop, MultiObjectiveConfig
 
 from loguru import logger
 
@@ -154,6 +154,15 @@ def run_evolution(config: dict):
     if not resume:
         clean_candidates_folder(candidates_dir)
 
+    # Build multi-objective config
+    mo_config = MultiObjectiveConfig(
+        selection_mode=config.get("selection_mode", "scalar"),
+        fitness_aggregation=config.get("fitness_aggregation", "mean"),
+        score_weights=config.get("score_weights"),
+        primary_score=config.get("primary_score"),
+        maximize_scores=config.get("maximize_scores"),
+    )
+
     # Create evolution loop
     evolution = EvolutionLoop(
         population_size=config["population_size"],
@@ -168,11 +177,7 @@ def run_evolution(config: dict):
         max_parallel_evals=config.get("max_parallel_evals"),
         debug=debug,
         user_insight=user_insight,
-        selection_mode=config.get("selection_mode", "scalar"),
-        fitness_aggregation=config.get("fitness_aggregation", "mean"),
-        score_weights=config.get("score_weights"),
-        primary_score=config.get("primary_score"),
-        maximize_scores=config.get("maximize_scores"),
+        multi_objective=mo_config,
         config=config,
     )
 

@@ -12,6 +12,7 @@ Following ReEvo framework:
 
 import json
 import random
+from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from loguru import logger
@@ -30,6 +31,28 @@ from evaluator import (
     pareto_tournament,
 )
 from evaluator_loader import create_evaluator
+
+
+@dataclass
+class MultiObjectiveConfig:
+    """Configuration for multi-objective optimization.
+
+    Bundles all parameters related to multi-objective selection and
+    fitness aggregation into a single object.
+
+    Attributes:
+        selection_mode: "scalar" (default) for fitness-based, "pareto" for multi-objective
+        fitness_aggregation: Aggregation method ("mean", "weighted", "primary") when
+                             evaluator doesn't provide calculate_fitness()
+        score_weights: Weights per score name for "weighted" aggregation
+        primary_score: Score name for "primary" aggregation
+        maximize_scores: Dict mapping score name to whether to maximize (for Pareto selection)
+    """
+    selection_mode: str = "scalar"
+    fitness_aggregation: str = "mean"
+    score_weights: Optional[Dict[str, float]] = None
+    primary_score: Optional[str] = None
+    maximize_scores: Optional[Dict[str, bool]] = None
 
 
 class EvolutionLoop:
@@ -51,11 +74,7 @@ class EvolutionLoop:
                  instance_workers: str | int = "auto",
                  max_parallel_evals: int = None,
                  evaluator: Optional[BaseEvaluator] = None,
-                 selection_mode: str = "scalar",
-                 fitness_aggregation: str = "mean",
-                 score_weights: Optional[Dict[str, float]] = None,
-                 primary_score: Optional[str] = None,
-                 maximize_scores: Optional[Dict[str, bool]] = None,
+                 multi_objective: Optional[MultiObjectiveConfig] = None,
                  config: Optional[Dict[str, Any]] = None):
         """
         Initialize evolution loop.
@@ -81,14 +100,11 @@ class EvolutionLoop:
                                instance_workers = min(num_instances, max_parallel_evals)
                                num_workers = max(1, max_parallel_evals // instance_workers)
             evaluator: Optional pre-created BaseEvaluator instance. If None, created from config.
-            selection_mode: "scalar" (default) for fitness-based, "pareto" for multi-objective
-            fitness_aggregation: Aggregation method ("mean", "weighted", "primary") when evaluator
-                                 doesn't provide calculate_fitness()
-            score_weights: Weights per score name for "weighted" aggregation
-            primary_score: Score name for "primary" aggregation
-            maximize_scores: Dict mapping score name to whether to maximize (for Pareto selection)
+            multi_objective: Multi-objective optimization config (selection mode, aggregation, etc.)
             config: Full application config dict (used by evaluator_loader)
         """
+        mo = multi_objective or MultiObjectiveConfig()
+
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
         self.mutation_rate = mutation_rate
@@ -98,8 +114,8 @@ class EvolutionLoop:
         self.dataset_dir = dataset_dir
         self.debug = debug
         self.user_insight = user_insight
-        self.selection_mode = selection_mode
-        self.maximize_scores = maximize_scores
+        self.selection_mode = mo.selection_mode
+        self.maximize_scores = mo.maximize_scores
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -162,9 +178,9 @@ class EvolutionLoop:
 
         # Fitness aggregator (used when evaluator.calculate_fitness() returns None)
         self.fitness_aggregator = FitnessAggregator(
-            method=fitness_aggregation,
-            score_weights=score_weights,
-            primary_score=primary_score,
+            method=mo.fitness_aggregation,
+            score_weights=mo.score_weights,
+            primary_score=mo.primary_score,
         )
 
         self.llm = LLMAgents(use_llm=True)
