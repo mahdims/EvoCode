@@ -19,15 +19,17 @@ from loguru import logger
 from candidate_manager import CandidateManager
 from llm_agents import LLMAgents
 from diversity_checker import DiversityChecker
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
-from ails_evaluator import AILSEvaluator
-from fitness_aggregator import FitnessAggregator
-from evaluator_loader import create_evaluator
-from pareto_selection import (
+from evaluator import (
+    BaseEvaluator,
+    EvalResult,
+    SmokeTestResult,
+    AILSEvaluator,
+    FitnessAggregator,
     compute_candidate_score_vector,
     pareto_select,
     pareto_tournament,
 )
+from evaluator_loader import create_evaluator
 
 
 class EvolutionLoop:

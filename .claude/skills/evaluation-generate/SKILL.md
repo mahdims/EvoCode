@@ -13,7 +13,7 @@ When this subskill is invoked, generate a custom evaluator based on the selected
 
 ## Template
 
-Generate an evaluator following this template based on `evolver/src/base_evaluator.py`:
+Generate an evaluator following this template based on `evolver/src/evaluator/base_evaluator.py`:
 
 ```python
 """
@@ -22,7 +22,7 @@ Auto-generated for EvoCode evolution loop.
 """
 
 from typing import List
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 
 
 class CustomEvaluator(BaseEvaluator):

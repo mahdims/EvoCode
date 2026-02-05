@@ -8,8 +8,8 @@ Preserves identical behavior to the original evaluation pipeline.
 from typing import List, Optional
 from loguru import logger
 
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
-from evaluator import Evaluator
+from .base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluator_stub import Evaluator
 
 
 class AILSEvaluator(BaseEvaluator):

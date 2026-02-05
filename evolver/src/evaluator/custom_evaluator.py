@@ -10,8 +10,8 @@ Measures:
 import re
 from typing import List
 
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
-from evaluator import Evaluator
+from evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluator_stub import Evaluator
 
 
 class AccuracyMemoryEvaluator(BaseEvaluator):

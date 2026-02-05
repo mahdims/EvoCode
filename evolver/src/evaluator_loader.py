@@ -13,8 +13,7 @@ from typing import Any, Dict, Tuple
 
 from loguru import logger
 
-from base_evaluator import BaseEvaluator
-from ails_evaluator import AILSEvaluator
+from evaluator import BaseEvaluator, AILSEvaluator
 
 
 def _parse_evaluator_spec(spec: str) -> Tuple[str, str | None]:

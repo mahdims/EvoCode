@@ -14,7 +14,7 @@ import random
 import re
 from typing import List
 
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from .base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 
 
 class MockMultiScoreEvaluator(BaseEvaluator):

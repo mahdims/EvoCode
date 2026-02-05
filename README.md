@@ -175,7 +175,7 @@ The system supports custom evaluators for different optimization domains or metr
 
 ```python
 # my_evaluator.py
-from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 from typing import List, Optional
 
 class MyEvaluator(BaseEvaluator):
