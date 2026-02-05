@@ -83,7 +83,7 @@ class CustomEvaluator(BaseEvaluator):
 
 4. **Set get_score_names()**: Return list of all metric names (must match keys in scores dict)
 
-5. **Save the evaluator**: Save to `evolver/src/custom_evaluator.py`
+5. **Save the evaluator**: Save to `evolver/src/evaluator/custom_evaluator.py`
 
 ## Test
 
@@ -91,7 +91,7 @@ Create a simple test to verify the evaluator works:
 
 ```python
 # Test the custom evaluator
-from custom_evaluator import CustomEvaluator
+from evaluator.custom_evaluator import CustomEvaluator
 
 evaluator = CustomEvaluator(target_instances=["test_instance"])
 print(f"Score names: {evaluator.get_score_names()}")
@@ -109,6 +109,6 @@ for r in results:
 ## Output
 
 Return to the calling skill:
-- `evaluator_spec`: Evaluator specification in `path:ClassName` format (e.g., `evolver/src/custom_evaluator.py:CustomEvaluator`)
+- `evaluator_spec`: Evaluator specification in `path:ClassName` format (e.g., `evolver/src/evaluator/custom_evaluator.py:CustomEvaluator`)
 - `score_names`: List of metric names the evaluator produces
 - `description`: Brief description of what the evaluator measures
