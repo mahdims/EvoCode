@@ -1,0 +1,30 @@
+{
+    "experiment_name": "accuracy_latency_pareto",
+    "population_size": 4,
+    "elite_ratio": 0.25,
+    "mutation_rate": 0.7,
+    "crossover_rate": 0.3,
+    "num_generations": 5,
+    "num_seeds": 2,
+    "reflection_frequency": 2,
+    "dataset_dir": "Vrp_Set_X",
+    "target_instances": [
+        "X-n266-k58",
+        "X-n143-k7",
+        "X-n139-k10"
+    ],
+    "use_vrpagent": true,
+    "code_length_penalty_alpha": 0.0,
+    "seed": 42,
+    "max_parallel_evals": 6,
+    "resume": false,
+    "verbose": 1,
+    "user_insight": "",
+
+    "evaluator_script": "evolver/src/custom_evaluator.py:CustomEvaluator",
+    "selection_mode": "pareto",
+    "maximize_scores": {
+        "accuracy": true,
+        "latency": false
+    }
+}

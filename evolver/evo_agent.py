@@ -18,7 +18,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from evolution_loop import EvolutionLoop
+from evolution_loop import EvolutionLoop, MultiObjectiveConfig
 
 from loguru import logger
 
@@ -76,6 +76,15 @@ def get_default_config() -> dict:
         "seed": 42,
         "max_parallel_evals": None,
 
+        # Pluggable evaluator settings
+        "evaluator_script": None,
+        "evaluator_config": {},
+        "selection_mode": "scalar",
+        "fitness_aggregation": "mean",
+        "score_weights": None,
+        "primary_score": None,
+        "maximize_scores": None,
+
         # New settings
         "resume": False,
         "debug": True,
@@ -105,6 +114,14 @@ def print_config(config: dict):
     logger.debug(f"  Debug output: {config.get('debug', True)}")
     if config.get('user_insight'):
         logger.debug(f"  User insight: {config['user_insight'][:50]}...")
+    if config.get('evaluator_script'):
+        logger.debug(f"  Evaluator script: {config['evaluator_script']}")
+        logger.debug(f"  Evaluator config: {config.get('evaluator_config', {})}")
+    logger.debug(f"  Selection mode: {config.get('selection_mode', 'scalar')}")
+    if config.get('selection_mode') == 'pareto':
+        logger.debug(f"  Maximize scores: {config.get('maximize_scores')}")
+    if config.get('fitness_aggregation', 'mean') != 'mean':
+        logger.debug(f"  Fitness aggregation: {config['fitness_aggregation']}")
     logger.debug("="*80)
 
 
@@ -137,6 +154,15 @@ def run_evolution(config: dict):
     if not resume:
         clean_candidates_folder(candidates_dir)
 
+    # Build multi-objective config
+    mo_config = MultiObjectiveConfig(
+        selection_mode=config.get("selection_mode", "scalar"),
+        fitness_aggregation=config.get("fitness_aggregation", "mean"),
+        score_weights=config.get("score_weights"),
+        primary_score=config.get("primary_score"),
+        maximize_scores=config.get("maximize_scores"),
+    )
+
     # Create evolution loop
     evolution = EvolutionLoop(
         population_size=config["population_size"],
@@ -150,7 +176,9 @@ def run_evolution(config: dict):
         seed=config["seed"],
         max_parallel_evals=config.get("max_parallel_evals"),
         debug=debug,
-        user_insight=user_insight
+        user_insight=user_insight,
+        multi_objective=mo_config,
+        config=config,
     )
 
     # Initialize or resume population

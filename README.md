@@ -26,11 +26,11 @@ LLM-guided evolutionary system for discovering effective destroy strategies for 
     │   └────────────────────────┬────────────────────────────────┘ │
     │                            ▼                                   │
     │   ┌─────────────────────────────────────────────────────────┐ │
-    │   │  EVALUATOR: Smoke test → End-game eval → Fitness score  │ │
+    │   │  EVALUATOR (Pluggable): Smoke test → Eval → Scores      │ │
     │   └────────────────────────┬────────────────────────────────┘ │
     │                            ▼                                   │
     │   ┌─────────────────────────────────────────────────────────┐ │
-    │   │  SELECTION: Keep top N candidates (elitist)             │ │
+    │   │  SELECTION: Elitist (scalar) or NSGA-II (Pareto)        │ │
     │   └─────────────────────────────────────────────────────────┘ │
     └────────────────────────────────────────────────────────────────┘
 ```
@@ -39,6 +39,7 @@ LLM-guided evolutionary system for discovering effective destroy strategies for 
 
 - **Dual-Process Reflection (ReEvo)**: Short-term reflections guide crossover; long-term reflections accumulate knowledge for mutation
 - **VRPAGENT Techniques**: Biased crossover (75/25 elite bias), typed mutations (ablation, extend, adjust, refactor), code length penalty
+- **Pluggable Evaluators**: Custom evaluators for different domains; multi-score outputs with Pareto selection
 - **Validation Gate**: Strict constraints on generated code (no nulls, no depot nodes, no duplicates)
 
 ## Setup
@@ -104,6 +105,13 @@ Example `config.json`:
 | `resume` | false | Resume from existing candidates |
 | `verbose` | true | Verbose output (false = reflections + best only) |
 | `user_insight` | null | List of user insights to guide evolution (see [User Insight](#user-insight)) |
+| `evaluator_script` | null | Custom evaluator as `"path/to/file.py:ClassName"` (see [Pluggable Evaluators](#pluggable-evaluators)) |
+| `evaluator_config` | {} | Evaluator-specific config passed to custom evaluator constructor |
+| `selection_mode` | "scalar" | Selection mode: "scalar" (fitness-based) or "pareto" (multi-objective NSGA-II) |
+| `fitness_aggregation` | "mean" | Multi-score aggregation: "mean", "weighted", or "primary" |
+| `score_weights` | null | Weights per score for "weighted" aggregation, e.g. `{"accuracy": 2, "speed": 1}` |
+| `primary_score` | null | Score name for "primary" aggregation |
+| `maximize_scores` | null | Dict mapping score names to maximize (true) or minimize (false) for Pareto |
 
 ### Datasets
 
@@ -158,6 +166,70 @@ Inject domain knowledge into the evolutionary process by providing a list of ins
 | `crossover` | Combine multiple candidates according to the idea | 2+ candidate IDs |
 
 User insights are processed at the start of evolution, before the main loop.
+
+### Pluggable Evaluators
+
+The system supports custom evaluators for different optimization domains or metrics. By default, it uses `AILSEvaluator` for VRP problems.
+
+**Creating a Custom Evaluator:**
+
+```python
+# my_evaluator.py
+from evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from typing import List, Optional
+
+class MyEvaluator(BaseEvaluator):
+    def __init__(self, target_instances=None, my_param=0.5, **kwargs):
+        # target_instances is automatically passed from main config
+        self.target_instances = target_instances or []
+        self.my_param = my_param
+
+    def smoke_test(self, artifact_path: str, candidate_name: str) -> SmokeTestResult:
+        # Quick validation test
+        return SmokeTestResult(success=True, output="OK", runtime=0.1, exit_code=0)
+
+    def evaluate(self, artifact_path: str, candidate_name: str) -> List[EvalResult]:
+        # Evaluate on each instance, return named scores
+        results = []
+        for inst in self.target_instances:
+            results.append(EvalResult(
+                instance=inst,
+                success=True,
+                scores={"accuracy": 0.95, "memory_efficiency": 0.80},
+                metadata={"artifact": artifact_path}
+            ))
+        return results
+
+    def get_score_names(self) -> List[str]:
+        return ["accuracy", "memory_efficiency"]
+
+    def calculate_fitness(self, results: List[EvalResult]) -> Optional[float]:
+        # Optional: return None to use fitness_aggregation from config
+        return None
+```
+
+**Config for custom evaluator:**
+
+```json
+{
+    "target_instances": ["inst1", "inst2"],
+    "evaluator_script": "path/to/my_evaluator.py:MyEvaluator",
+    "evaluator_config": {"my_param": 0.7},
+    "selection_mode": "pareto",
+    "maximize_scores": {"accuracy": true, "memory_efficiency": true}
+}
+```
+
+The `evaluator_script` format is `"path/to/file.py:ClassName"`. You can also omit the class name (`"path/to/file.py"`) to auto-detect the first `BaseEvaluator` subclass in the file. The path is resolved relative to the CWD, project root, or repo root.
+
+Common parameters (`target_instances`, `max_workers`, etc.) are automatically passed to custom evaluators. Use `evaluator_config` only for evaluator-specific settings.
+
+**Multi-Objective Selection:**
+
+When `selection_mode` is `"pareto"` and the evaluator returns multiple scores, NSGA-II selection is used:
+- Non-dominated sorting ranks candidates into Pareto fronts
+- Crowding distance preserves diversity within fronts
+- Tournament selection uses Pareto dominance
 
 ## Output
 
