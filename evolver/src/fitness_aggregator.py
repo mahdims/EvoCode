@@ -66,7 +66,7 @@ class FitnessAggregator:
         score_means: Dict[str, float] = {}
         for name in all_score_names:
             values = [r.scores.get(name, 0.0) for r in successful]
-            score_means[name] = sum(values) / len(eval_results)
+            score_means[name] = sum(values) / len(successful)
 
         if self.method == "primary":
             key = self.primary_score

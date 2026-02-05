@@ -27,7 +27,7 @@ def compute_candidate_score_vector(eval_results, score_names: List[str]) -> Dict
     if not successful:
         return {name: -float('inf') for name in score_names}
 
-    total = len(eval_results)
+    total = len(successful)
     vector = {}
     for name in score_names:
         values = [r.scores.get(name, 0.0) for r in successful]
