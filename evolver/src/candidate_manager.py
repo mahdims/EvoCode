@@ -354,7 +354,8 @@ public class {wrapper_class} extends Perturbation {{
                                    eval_results: list,
                                    fitness: float,
                                    base_fitness: float,
-                                   generation: int = 0) -> bool:
+                                   generation: int = 0,
+                                   score_vector: dict = None) -> bool:
         """
         Update candidate metadata with evaluation results.
 
@@ -364,6 +365,7 @@ public class {wrapper_class} extends Perturbation {{
             fitness: Final fitness (with penalty)
             base_fitness: Base fitness (without penalty)
             generation: Generation when evaluated
+            score_vector: Optional dict of per-score means for multi-objective selection
 
         Returns:
             True if update successful
@@ -387,6 +389,9 @@ public class {wrapper_class} extends Perturbation {{
             "num_instances": len(eval_results),
             "instances": []
         }
+
+        if score_vector is not None:
+            metadata["evaluation"]["score_vector"] = score_vector
 
         for result in eval_results:
             metadata["evaluation"]["instances"].append({

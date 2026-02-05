@@ -17,9 +17,17 @@ from pathlib import Path
 from loguru import logger
 
 from candidate_manager import CandidateManager
-from evaluator import Evaluator
 from llm_agents import LLMAgents
 from diversity_checker import DiversityChecker
+from base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from ails_evaluator import AILSEvaluator
+from fitness_aggregator import FitnessAggregator
+from evaluator_loader import create_evaluator
+from pareto_selection import (
+    compute_candidate_score_vector,
+    pareto_select,
+    pareto_tournament,
+)
 
 
 class EvolutionLoop:
@@ -39,7 +47,14 @@ class EvolutionLoop:
                  user_insight: Optional[List[Dict[str, Any]]] = None,
                  num_workers: int = 2,
                  instance_workers: str | int = "auto",
-                 max_parallel_evals: int = None):
+                 max_parallel_evals: int = None,
+                 evaluator: Optional[BaseEvaluator] = None,
+                 selection_mode: str = "scalar",
+                 fitness_aggregation: str = "mean",
+                 score_weights: Optional[Dict[str, float]] = None,
+                 primary_score: Optional[str] = None,
+                 maximize_scores: Optional[Dict[str, bool]] = None,
+                 config: Optional[Dict[str, Any]] = None):
         """
         Initialize evolution loop.
 
@@ -63,6 +78,14 @@ class EvolutionLoop:
             max_parallel_evals: Maximum total parallel workers. If set, intelligently divides budget:
                                instance_workers = min(num_instances, max_parallel_evals)
                                num_workers = max(1, max_parallel_evals // instance_workers)
+            evaluator: Optional pre-created BaseEvaluator instance. If None, created from config.
+            selection_mode: "scalar" (default) for fitness-based, "pareto" for multi-objective
+            fitness_aggregation: Aggregation method ("mean", "weighted", "primary") when evaluator
+                                 doesn't provide calculate_fitness()
+            score_weights: Weights per score name for "weighted" aggregation
+            primary_score: Score name for "primary" aggregation
+            maximize_scores: Dict mapping score name to whether to maximize (for Pareto selection)
+            config: Full application config dict (used by evaluator_loader)
         """
         self.population_size = population_size
         self.elite_size = int(population_size * elite_ratio)
@@ -73,6 +96,8 @@ class EvolutionLoop:
         self.dataset_dir = dataset_dir
         self.debug = debug
         self.user_insight = user_insight
+        self.selection_mode = selection_mode
+        self.maximize_scores = maximize_scores
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -84,37 +109,63 @@ class EvolutionLoop:
             ails_jar=str(ails_jar),
             cache_file=str(self.candidates_dir / "cache.json")
         )
-        self.evaluator = Evaluator(
-            ails_jar=str(ails_jar),
-            data_dir=str(project_root / "AILS" / "data" / dataset_dir),
-            warmstart_dir=str(project_root / "AILS" / "warm_start" / dataset_dir),
-            temp_dir=str(project_root / "temp")
-        )
-        self.llm = LLMAgents(use_llm=True)
 
         # Set default instances based on dataset
         if target_instances is None:
             if dataset_dir == "Vrp_Set_X":
-                # Use two smallest instances for fast testing
                 self.target_instances = ["X-n101-k25", "X-n106-k14"]
             else:
-                # Default to XL smallest instance
                 self.target_instances = ["XL-n1048-k237"]
         else:
             self.target_instances = target_instances
 
         # Handle max_parallel_evals: controls TOTAL parallelization budget
-        # Total workers = num_workers (candidate pipelines) * instance_workers (per candidate)
         if max_parallel_evals is not None:
-            # Intelligently divide budget between instance and candidate parallelism
             num_instances = len(self.target_instances)
-            # Use up to all instances in parallel, but not more than budget
             self.instance_workers = min(num_instances, max_parallel_evals)
-            # Use remaining budget for candidate pipelines
             self.num_workers = max(1, max_parallel_evals // self.instance_workers)
         else:
             self.num_workers = num_workers
             self.instance_workers = instance_workers
+
+        # --- Pluggable evaluator setup ---
+        if evaluator is not None:
+            self.evaluator = evaluator
+        elif config and config.get("evaluator_script"):
+            self.evaluator = create_evaluator(
+                config,
+                ails_jar=str(ails_jar),
+                data_dir=str(project_root / "AILS" / "data" / dataset_dir),
+                warmstart_dir=str(project_root / "AILS" / "warm_start" / dataset_dir),
+                temp_dir=str(project_root / "temp"),
+                target_instances=self.target_instances,
+                max_workers=self._get_instance_workers_static(
+                    self.instance_workers, self.num_workers, len(self.target_instances)
+                ),
+            )
+        else:
+            self.evaluator = AILSEvaluator(
+                ails_jar=str(ails_jar),
+                data_dir=str(project_root / "AILS" / "data" / dataset_dir),
+                warmstart_dir=str(project_root / "AILS" / "warm_start" / dataset_dir),
+                temp_dir=str(project_root / "temp"),
+                target_instances=self.target_instances,
+                max_workers=self._get_instance_workers_static(
+                    self.instance_workers, self.num_workers, len(self.target_instances)
+                ),
+            )
+
+        # Score names from evaluator
+        self.score_names = self.evaluator.get_score_names()
+
+        # Fitness aggregator (used when evaluator.calculate_fitness() returns None)
+        self.fitness_aggregator = FitnessAggregator(
+            method=fitness_aggregation,
+            score_weights=score_weights,
+            primary_score=primary_score,
+        )
+
+        self.llm = LLMAgents(use_llm=True)
 
         # Population tracking
         self.population: List[Dict[str, Any]] = []
@@ -136,17 +187,58 @@ class EvolutionLoop:
 
         random.seed(seed)
 
+    @staticmethod
+    def _get_instance_workers_static(instance_workers, num_workers: int, num_instances: int) -> int:
+        """Calculate instance workers without needing self (for use before __init__ completes)."""
+        import os
+        if instance_workers == "auto":
+            cpu_count = max(1, os.cpu_count())
+            workers = max(1, cpu_count // num_workers)
+            return min(workers, num_instances)
+        else:
+            return min(int(instance_workers), num_instances)
+
     def _get_instance_workers(self) -> int:
         """Calculate number of parallel instance workers per candidate."""
-        import os
-        if self.instance_workers == "auto":
-            # Reserve 1 core for system/monitoring tasks
-            cpu_count = max(1, (os.cpu_count()))
-            workers = max(1, cpu_count // self.num_workers)
-            # Cap at number of target instances
-            return min(workers, len(self.target_instances))
-        else:
-            return min(int(self.instance_workers), len(self.target_instances))
+        return self._get_instance_workers_static(
+            self.instance_workers, self.num_workers, len(self.target_instances)
+        )
+
+    def _compute_fitness(self, eval_results_new: List[EvalResult]) -> float:
+        """Compute scalar fitness from new-style EvalResults.
+
+        Asks the evaluator first; falls back to the fitness aggregator.
+        """
+        fitness = self.evaluator.calculate_fitness(eval_results_new)
+        if fitness is not None:
+            return fitness
+        return self.fitness_aggregator.aggregate(eval_results_new)
+
+    def _compute_score_vector(self, eval_results_new: List[EvalResult]) -> Dict[str, float]:
+        """Compute per-score mean vector from EvalResults."""
+        return compute_candidate_score_vector(eval_results_new, self.score_names)
+
+    def _eval_results_to_legacy(self, eval_results_new: List[EvalResult]) -> List[Dict]:
+        """Convert new EvalResult list to legacy dict format.
+
+        Flattens scores and metadata into a single dict per instance so that
+        downstream code (reflection prompts, candidate_manager) sees the same
+        keys as before (instance, improvement, initial_cost, final_cost, etc.).
+        """
+        legacy = []
+        for r in eval_results_new:
+            d = {
+                "instance": r.instance,
+                "success": r.success,
+            }
+            # Flatten scores into the dict
+            d.update(r.scores)
+            # Flatten metadata into the dict
+            d.update(r.metadata)
+            if r.error is not None:
+                d["error"] = r.error
+            legacy.append(d)
+        return legacy
 
     def resume_from_candidates(self) -> bool:
         """
@@ -201,7 +293,8 @@ class EvolutionLoop:
                     "base_fitness": eval_data.get("base_fitness", 0),
                     "generation": eval_data.get("generation", 0),
                     "parent_id": metadata.get("parent_id"),
-                    "mutation_type": metadata.get("mutation_type", "unknown")
+                    "mutation_type": metadata.get("mutation_type", "unknown"),
+                    "score_vector": eval_data.get("score_vector", {}),
                 }
 
                 candidates.append(candidate)
@@ -275,20 +368,20 @@ class EvolutionLoop:
                 result["wrapper_class"]
             )
 
-            if not smoke["success"]:
+            if not smoke.success:
                 logger.debug(f"[INIT] Seed {i} failed smoke test, skipping")
                 continue
 
-            # Evaluate (parallel across instances)
-            eval_results = self.evaluator.evaluate_endgame_parallel(
+            # Evaluate (via pluggable evaluator)
+            eval_results_new = self.evaluator.evaluate(
                 result["jar_path"],
-                result["wrapper_class"],
-                self.target_instances,
-                max_workers=self._get_instance_workers()
+                result["wrapper_class"]
             )
+            eval_results = self._eval_results_to_legacy(eval_results_new)
+            score_vector = self._compute_score_vector(eval_results_new)
 
             # Calculate fitness with optional code length penalty
-            base_fitness = self.evaluator.calculate_fitness(eval_results)
+            base_fitness = self._compute_fitness(eval_results_new)
             fitness = self._calculate_fitness_with_penalty(strategy_code, base_fitness)
 
             # Save evaluation results to metadata
@@ -297,20 +390,22 @@ class EvolutionLoop:
                 eval_results=eval_results,
                 fitness=fitness,
                 base_fitness=base_fitness,
-                generation=0
+                generation=0,
+                score_vector=score_vector
             )
 
             self.population.append({
                 "candidate_id": self.candidate_counter,
                 "code": strategy_code,
-                "idea": idea,  # NEW FIELD
+                "idea": idea,
                 "metadata": result,
                 "eval_results": eval_results,
                 "fitness": fitness,
                 "base_fitness": base_fitness,
                 "generation": 0,
                 "parent_id": None,
-                "mutation_type": "initial_seed"
+                "mutation_type": "initial_seed",
+                "score_vector": score_vector,
             })
 
             logger.debug(f"[INIT] Seed {i} (ID={self.candidate_counter}): fitness={fitness*100:.4f}%")
@@ -334,6 +429,7 @@ class EvolutionLoop:
         Select two parents using tournament selection.
 
         Returns better parent first, worse parent second (for reflection comparison).
+        Uses Pareto tournament when selection_mode is "pareto".
 
         Args:
             tournament_size: Number of candidates in tournament
@@ -351,24 +447,44 @@ class EvolutionLoop:
             else:
                 return self.population[1], self.population[0]
 
-        # Tournament selection for two parents
-        parent1 = max(random.sample(self.population, actual_tournament_size),
-                     key=lambda x: x["fitness"])
+        use_pareto = (self.selection_mode == "pareto"
+                      and len(self.score_names) > 1
+                      and any(c.get("score_vector") for c in self.population))
 
-        # Select second parent, ensuring it's different (with retry limit to prevent infinite loop)
+        if use_pareto:
+            parent1 = pareto_tournament(
+                self.population, actual_tournament_size,
+                self.score_names, self.maximize_scores
+            )
+        else:
+            parent1 = max(random.sample(self.population, actual_tournament_size),
+                         key=lambda x: x["fitness"])
+
+        # Select second parent, ensuring it's different (with retry limit)
         max_attempts = 20
         attempts = 0
-        parent2 = max(random.sample(self.population, actual_tournament_size),
-                     key=lambda x: x["fitness"])
-
-        while parent1["candidate_id"] == parent2["candidate_id"] and attempts < max_attempts:
+        if use_pareto:
+            parent2 = pareto_tournament(
+                self.population, actual_tournament_size,
+                self.score_names, self.maximize_scores
+            )
+        else:
             parent2 = max(random.sample(self.population, actual_tournament_size),
                          key=lambda x: x["fitness"])
+
+        while parent1["candidate_id"] == parent2["candidate_id"] and attempts < max_attempts:
+            if use_pareto:
+                parent2 = pareto_tournament(
+                    self.population, actual_tournament_size,
+                    self.score_names, self.maximize_scores
+                )
+            else:
+                parent2 = max(random.sample(self.population, actual_tournament_size),
+                             key=lambda x: x["fitness"])
             attempts += 1
 
-        # If we still got the same parent after max attempts, just pick a different one directly
+        # If we still got the same parent after max attempts, pick a different one directly
         if parent1["candidate_id"] == parent2["candidate_id"]:
-            # Fallback: pick any different candidate
             different_candidates = [c for c in self.population if c["candidate_id"] != parent1["candidate_id"]]
             if different_candidates:
                 parent2 = random.choice(different_candidates)
@@ -686,20 +802,20 @@ class EvolutionLoop:
             result["wrapper_class"]
         )
 
-        if not smoke["success"]:
+        if not smoke.success:
             logger.debug(f"[OFFSPRING] Smoke test failed")
             return None
 
-        # Evaluate (parallel across instances)
-        eval_results = self.evaluator.evaluate_endgame_parallel(
+        # Evaluate (via pluggable evaluator)
+        eval_results_new = self.evaluator.evaluate(
             result["jar_path"],
-            result["wrapper_class"],
-            self.target_instances,
-            max_workers=self._get_instance_workers()
+            result["wrapper_class"]
         )
+        eval_results = self._eval_results_to_legacy(eval_results_new)
+        score_vector = self._compute_score_vector(eval_results_new)
 
         # Calculate fitness with optional code length penalty
-        base_fitness = self.evaluator.calculate_fitness(eval_results)
+        base_fitness = self._compute_fitness(eval_results_new)
         fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
 
         # Save evaluation results to metadata
@@ -708,7 +824,8 @@ class EvolutionLoop:
             eval_results=eval_results,
             fitness=fitness,
             base_fitness=base_fitness,
-            generation=self.generation
+            generation=self.generation,
+            score_vector=score_vector
         )
 
         offspring = {
@@ -721,7 +838,8 @@ class EvolutionLoop:
             "base_fitness": base_fitness,
             "generation": self.generation,
             "parent_id": parent_id,
-            "mutation_type": mutation_type
+            "mutation_type": mutation_type,
+            "score_vector": score_vector,
         }
 
         logger.debug(f"[OFFSPRING] ID={self.candidate_counter}: fitness={fitness*100:.4f}%")
@@ -771,13 +889,25 @@ class EvolutionLoop:
         """
         Select survivors for next generation.
 
-        Strategy: Elitist - keep top N by fitness.
+        Uses Pareto-based NSGA-II selection when selection_mode is "pareto"
+        and multiple scores are available. Otherwise uses elitist scalar selection.
         """
-        # Sort by fitness (descending)
-        self.population.sort(key=lambda x: x["fitness"], reverse=True)
-
-        # Keep top population_size
-        self.population = self.population[:self.population_size]
+        if (self.selection_mode == "pareto"
+                and len(self.score_names) > 1
+                and any(c.get("score_vector") for c in self.population)):
+            self.population = pareto_select(
+                self.population,
+                self.population_size,
+                self.score_names,
+                self.maximize_scores,
+            )
+            # Sort by fitness for reporting
+            self.population.sort(key=lambda x: x["fitness"], reverse=True)
+        else:
+            # Sort by fitness (descending)
+            self.population.sort(key=lambda x: x["fitness"], reverse=True)
+            # Keep top population_size
+            self.population = self.population[:self.population_size]
 
         logger.debug(f"[SELECTION] Population after selection: {len(self.population)} candidates")
         logger.debug(f"[SELECTION] Top fitness: {self.population[0]['fitness']*100:.4f}%")
@@ -974,21 +1104,21 @@ class EvolutionLoop:
                         compile_result["wrapper_class"]
                     )
 
-                    if not smoke_result["success"]:
+                    if not smoke_result.success:
                         logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed smoke test")
                         continue
 
                     logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} passed smoke test")
 
-                    # === Stage 4: Evaluate (instances in parallel) ===
-                    eval_results = self.evaluator.evaluate_endgame_parallel(
+                    # === Stage 4: Evaluate (via pluggable evaluator) ===
+                    eval_results_new = self.evaluator.evaluate(
                         compile_result["jar_path"],
-                        compile_result["wrapper_class"],
-                        self.target_instances,
-                        max_workers=self._get_instance_workers()
+                        compile_result["wrapper_class"]
                     )
+                    eval_results = self._eval_results_to_legacy(eval_results_new)
+                    score_vector = self._compute_score_vector(eval_results_new)
 
-                    base_fitness = self.evaluator.calculate_fitness(eval_results)
+                    base_fitness = self._compute_fitness(eval_results_new)
                     fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
 
                     # Save evaluation results
@@ -997,7 +1127,8 @@ class EvolutionLoop:
                         eval_results=eval_results,
                         fitness=fitness,
                         base_fitness=base_fitness,
-                        generation=self.generation
+                        generation=self.generation,
+                        score_vector=score_vector
                     )
 
                     offspring = {
@@ -1010,7 +1141,8 @@ class EvolutionLoop:
                         "base_fitness": base_fitness,
                         "generation": self.generation,
                         "parent_id": parent_id,
-                        "mutation_type": mutation_type
+                        "mutation_type": mutation_type,
+                        "score_vector": score_vector,
                     }
 
                     with results_lock:
