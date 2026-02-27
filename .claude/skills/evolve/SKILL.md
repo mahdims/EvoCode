@@ -87,7 +87,7 @@ If a user interrupts the execution of the `evo_agent.py` script, update the para
 - Set `"resume": true`
 - Add `user_insight` containing the insight provided by the user
 
-If the default parameters were used, create a copy of the `evolver/config.json` and make the updates there.
+If the default parameters were used, create a copy of the `/app/evolver/config.json` and make the updates there.
 
 ### User Insight Format
 

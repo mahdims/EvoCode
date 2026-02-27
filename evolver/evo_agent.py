@@ -141,7 +141,7 @@ def clean_candidates_folder(candidates_dir: Path):
     candidates_dir.mkdir(exist_ok=True)
 
 
-def run_evolution(config: dict):
+def run_evolution(config: dict, visualize: bool = False):
     """
     Run evolution with given configuration.
 
@@ -185,9 +185,8 @@ def run_evolution(config: dict):
         debug=debug,
         user_insight=user_insight,
         multi_objective=mo_config,
-        config=config,
-        # builder=None means EvolutionLoop will call create_builder(config, ails_jar)
-        # automatically — which respects the "builder_script" config key.
+        visualize=visualize,
+        config=config
     )
 
     # Initialize or resume population
@@ -261,6 +260,11 @@ Examples:
         help="Path to log file. If empty, no log file is generated.",
         type=str
     )
+    parser.add_argument(
+        "--novisual",
+        action="store_true",
+        help="Generate data for platform visualization."
+    )
     args = parser.parse_args()
 
     # Determine config path
@@ -299,7 +303,7 @@ Examples:
         config["debug"] = False
 
     try:
-        evolution = run_evolution(config)
+        evolution = run_evolution(config, not args.novisual)
         logger.success("[DONE] Evolution completed successfully!")
         return 0
     except KeyboardInterrupt:

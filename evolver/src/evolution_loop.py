@@ -10,8 +10,13 @@ Following ReEvo framework:
 - Long-term reflection: Accumulates knowledge, guides elitist mutation
 """
 
+import os
 import json
 import random
+import sqlite3
+import time
+import networkx as nx
+import numpy as np
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
@@ -35,6 +40,73 @@ from builder_loader import create_builder
 from core.registry import DomainPluginRegistry
 import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
+# TODO: Where do we want this to go? Parameter? Static internal path? Configuration file?
+DB_PATH = os.getenv("EVOCODE_DB_PATH", "/data/evolution.db")
+
+def init_db() -> None:
+    """Function to initialize empty database with empty tables"""
+    # TODO: - We should allow this to be configured through parameters, but for now we will mostly hardcode behaviour
+    #       - We also need to add support for resuming; presently we will just overwrite the same DB
+    logger.debug(f"[DB INIT] Checking database at {DB_PATH}...")
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+    with sqlite3.connect(DB_PATH) as conn:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL;")
+        except:
+            pass
+
+        # Create table with new schema
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS metrics (
+                generation INTEGER PRIMARY KEY,
+                global_best REAL,
+                avg_fitness REAL,
+                viability_rate REAL,
+                diversity REAL,
+                timestamp REAL,
+                additional_metrics TEXT
+            )
+        """)
+
+        # Migration logic (safe to keep)
+        try:
+            conn.execute("SELECT additional_metrics FROM metrics LIMIT 1")
+        except sqlite3.OperationalError:
+            logger.debug("[DB INIT] Migrating DB: Adding additional_metrics column...")
+            conn.execute("ALTER TABLE metrics ADD COLUMN additional_metrics TEXT")
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS snapshots (
+                generation INTEGER PRIMARY KEY,
+                genealogy_json TEXT,
+                best_code_snippet TEXT,
+                strategies_json TEXT,
+                embeddings_json TEXT
+            )
+        """)
+
+        # Global strategy table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS strategies (
+                idea TEXT PRIMARY KEY,
+                direction TEXT,
+                status TEXT,
+                impact TEXT,
+                best_fit REAL
+            )
+        """)
+
+        # Global reflection table
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS reflections (
+                generation INTEGER PRIMARY KEY,
+                content TEXT,
+                timestamp REAL
+            )
+        """)
+
+    logger.debug("[DB INIT] Database initialized.")
 
 @dataclass
 class MultiObjectiveConfig:
@@ -78,6 +150,7 @@ class EvolutionLoop:
                  evaluator: Optional[BaseEvaluator] = None,
                  builder: Optional[BaseBuilder] = None,
                  multi_objective: Optional[MultiObjectiveConfig] = None,
+                 visualize: bool = False,
                  config: Optional[Dict[str, Any]] = None):
         """
         Initialize evolution loop.
@@ -120,6 +193,7 @@ class EvolutionLoop:
         self.user_insight = user_insight
         self.selection_mode = mo.selection_mode
         self.maximize_scores = mo.maximize_scores
+        self.visualize = visualize
 
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
@@ -205,6 +279,13 @@ class EvolutionLoop:
         self._generation_start_counter = 0  # Track candidates tested per generation
 
         random.seed(seed)
+
+        # Extra DB data
+        self.history = {}
+        self.strategy_registry: Dict = {}
+
+        if self.visualize:
+            init_db()
 
     @staticmethod
     def _get_instance_workers_static(instance_workers, num_workers: int, num_instances: int) -> int:
@@ -984,13 +1065,16 @@ class EvolutionLoop:
             # Survival selection
             self.survival_selection()
 
-            # Report strategy progress (skip iteration 0 - only initial seeds)
             if self.generation > 0:
                 self._report_strategy_progress()
 
             # Update long-term reflection periodically
             if self.generation % reflection_frequency == 0:
                 self.update_long_term_reflection()
+
+            # Update DB
+            if self.visualize:
+                self._log_generation_to_db(offspring_list, num_offspring)
 
             # Report iteration statistics (always shown)
             self._report_iteration_statistics()
@@ -1000,6 +1084,156 @@ class EvolutionLoop:
 
         # Save idea evolution log
         self.save_idea_evolution_log()
+
+    def _log_generation_to_db(self, offspring_list: list, num_attempted: int):
+        """
+        Centralized DB logging: Updates Global Strategy Table + Snapshots.
+        """
+        DB_PATH = "/data/evolution.db"
+
+        viability = len(offspring_list) / num_attempted if num_attempted > 0 else 0.0
+
+        if not self.population:
+            return
+
+        fitnesses = [c["fitness"] for c in self.population]
+        best_candidate = max(self.population, key=lambda x: x["fitness"])
+
+        global_best = best_candidate["fitness"]
+        avg_fitness = np.mean(fitnesses)
+        diversity = np.var(fitnesses)
+
+        # Geneaology tree
+        for child in offspring_list:
+            self.history[child['candidate_id']] = child
+
+        for ind in self.population:
+            if ind['candidate_id'] not in self.history:
+                self.history[ind['candidate_id']] = ind
+
+        G = nx.DiGraph()
+        living_ids = {ind['candidate_id'] for ind in self.population}
+
+        for cid, data in self.history.items():
+            is_alive = cid in living_ids
+            G.add_node(
+                cid,
+                fitness=data.get("fitness", 0),
+                code=data.get("code", ""),
+                label=str(cid),
+                alive=is_alive,
+                generation=data.get("generation", 0)
+            )
+
+            if data.get("parent_id") in self.history:
+                G.add_edge(data.get("parent_id"), cid)
+
+        genealogy_json = json.dumps(nx.node_link_data(G))
+
+        # Directions Data
+        for child in offspring_list:
+            idea_key = child.get("idea")
+            if not idea_key or len(idea_key) < 5:
+                continue
+
+            child_fitness = child.get("fitness", 0.0)
+            mutation_type = child.get("mutation_type", "Evolution")
+
+            # Initialize or Update
+            if idea_key not in self.strategy_registry:
+                status = "Succeeded" if child_fitness > avg_fitness else "Exploring"
+                self.strategy_registry[idea_key] = {
+                    "Direction": mutation_type,
+                    "Idea": idea_key,
+                    "Status": status,
+                    "Impact": f"{child_fitness:.4f}",
+                    "Best_Fit": child_fitness
+                }
+            else:
+                entry = self.strategy_registry[idea_key]
+                prev_best = entry.get("Best_Fit", -float('inf'))
+
+                if child_fitness > prev_best:
+                    entry["Best_Fit"] = child_fitness
+                    entry["Impact"] = f"{child_fitness:.4f}"
+                    if child_fitness > avg_fitness:
+                        entry["Status"] = "Succeeded"
+
+                if entry["Status"] == "Exploring" and child_fitness < (avg_fitness * 0.8):
+                     entry["Status"] = "Abandoned"
+
+        # Reflections
+        reflection_content = getattr(self, "long_term_reflection", "")
+
+        # Embeddings data
+        embeddings = []
+        for child in offspring_list:
+            fitness = child.get("fitness", 0.0)
+            score_dict = child.get("score_vector", {})
+
+            if not isinstance(score_dict, dict): score_dict = {}
+
+            clean_values = []
+            for k in sorted(score_dict.keys()):
+                val = score_dict[k]
+                if val == float('inf') or val == -float('inf'): val = 0.0
+                clean_values.append(val)
+
+            if len(clean_values) >= 2:
+                x_val, y_val = clean_values[0], clean_values[1]
+            elif len(clean_values) == 1:
+                x_val, y_val = clean_values[0], clean_values[0]
+            else:
+                x_val, y_val = 0.0, 0.0
+
+            embeddings.append({
+                "x": x_val, "y": y_val,
+                "Strategy Cluster": str(child.get("mutation_type", "Initial")),
+                "Fitness": fitness
+            })
+        embeddings_json = json.dumps(embeddings)
+
+        # Put in DB now
+        try:
+            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+            with sqlite3.connect(DB_PATH) as conn:
+                try:
+                    conn.execute("PRAGMA journal_mode=WAL;")
+                except:
+                    pass
+
+                # Sync Registry to Global Table
+                for s in self.strategy_registry.values():
+                    conn.execute(
+                        "INSERT OR REPLACE INTO strategies VALUES (?, ?, ?, ?, ?)",
+                        (s["Idea"], s["Direction"], s["Status"], s["Impact"], s.get("Best_Fit", 0.0))
+                    )
+
+                # Insert Metrics
+                conn.execute(
+                    "INSERT OR REPLACE INTO metrics VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (self.generation, global_best, avg_fitness, viability, diversity, time.time(), "{}")
+                )
+
+                # Insert Snapshot
+                # We still write 'strategies_json' here for backward compatibility with your current dashboard,
+                # but the global 'strategies' table is now the source of truth.
+                current_strategies_list = json.dumps(list(self.strategy_registry.values()))
+
+                conn.execute(
+                    "INSERT OR REPLACE INTO snapshots VALUES (?, ?, ?, ?, ?)",
+                    (self.generation, genealogy_json, best_candidate.get("code", ""),
+                     current_strategies_list, embeddings_json)
+                )
+
+                conn.execute(
+                    "INSERT OR REPLACE INTO reflections VALUES (?, ?, ?)",
+                    (self.generation, reflection_content, time.time())
+                )
+
+        except Exception as e:
+            # Replace with logger.error if available
+            print(f"[DB Error] Failed to log generation {self.generation}: {e}")
 
     def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
         """
