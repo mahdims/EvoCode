@@ -46,6 +46,7 @@ class AILSVRPPlugin(BaseDomainPlugin):
         target_instances = config.get("target_instances", [])
         seed = config.get("seed", 42)
         max_workers = config.get("max_parallel_evals")
+        smoke_test_instance = config.get("smoke_test_instance", None)
 
         data_dir = str(ails_root / "data" / dataset_dir)
         warmstart_dir = str(ails_root / "warm_start" / dataset_dir)
@@ -58,6 +59,7 @@ class AILSVRPPlugin(BaseDomainPlugin):
             target_instances=target_instances,
             max_workers=max_workers,
             seed=seed,
+            smoke_test_instance=smoke_test_instance,
         )
         self._instances = target_instances
 

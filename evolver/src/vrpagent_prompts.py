@@ -9,6 +9,9 @@ Key additions from VRPAGENT:
 1. Biased Crossover: Explicit percentage bias toward elite parent
 2. Four Mutation Types: Ablation, Extend, Adjust-Parameters, Refactor
 3. Code Length Regularization: Prefer concise implementations
+
+Domain-agnostic: pass ``problem_description``, ``language``, and ``constraints`` to
+override the built-in AILS/VRP defaults.
 """
 
 from typing import Optional, Dict, List, Any
@@ -30,7 +33,10 @@ class VRPAgentPrompts:
         short_term_reflection: Optional[str] = None,
         elite_bias: float = 0.75,
         elite_idea: str = None,
-        non_elite_idea: str = None
+        non_elite_idea: str = None,
+        problem_description: str = "a Vehicle Routing Problem (VRP) solver",
+        language: str = "java",
+        constraints: str = None,
     ) -> str:
         """
         VRPAGENT Biased Crossover + ReEvo Short-Term Reflection
@@ -38,14 +44,17 @@ class VRPAgentPrompts:
         Combines VRPAGENT's explicit bias with ReEvo's comparative analysis.
 
         Args:
-            elite_code: Better performing parent code
+            elite_code: Better performing parent source code
             elite_results: Elite's evaluation results
-            non_elite_code: Worse performing parent code
+            non_elite_code: Worse performing parent source code
             non_elite_results: Non-elite's evaluation results
             short_term_reflection: Optional ReEvo reflection comparing the parents
             elite_bias: Percentage to take from elite (default: 75%)
             elite_idea: High-level idea/concept of elite parent
             non_elite_idea: High-level idea/concept of non-elite parent
+            problem_description: Short description of what is being optimized
+            language: Programming language for code fences (e.g. "java", "python")
+            constraints: Domain constraints block. When None, falls back to AILS VRP defaults.
 
         Returns:
             Prompt for biased crossover with reflection guidance
@@ -66,59 +75,7 @@ class VRPAgentPrompts:
         elite_idea_section = f"\nELITE IDEA: {elite_idea}\n" if elite_idea else ""
         non_elite_idea_section = f"\nNON-ELITE IDEA: {non_elite_idea}\n" if non_elite_idea else ""
 
-        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
-
-TASK: Perform BIASED CROSSOVER to create an offspring that inherits primarily from the elite parent.
-
-=== ELITE PARENT: {elite_class} (BETTER) ==={elite_idea_section}
-```java
-{elite_code}
-```
-
-PERFORMANCE:
-- Average Improvement: {elite_avg * 100:.3f}%
-- Per-instance results:
-{VRPAgentPrompts._format_results(elite_results)}
-
-=== NON-ELITE PARENT: {non_elite_class} (WORSE) ==={non_elite_idea_section}
-```java
-{non_elite_code}
-```
-
-PERFORMANCE:
-- Average Improvement: {non_elite_avg * 100:.3f}%
-- Per-instance results:
-{VRPAgentPrompts._format_results(non_elite_results)}
-
-Performance Gap: {(elite_avg - non_elite_avg) * 100:.3f} percentage points
-
-{"=== REFLECTION INSIGHT ===" if short_term_reflection else ""}
-{short_term_reflection if short_term_reflection else ""}
-
-=== CROSSOVER INSTRUCTION (VRPAGENT BIASED STRATEGY) ===
-
-**CRITICAL: This is a BIASED crossover favoring exploitation over exploration.**
-
-1. **Take {elite_percentage}% of ideas and logic from the ELITE parent**
-   - Preserve the core mechanism that makes it successful
-   - Keep the main selection strategy
-   - Maintain the effective node/route interaction patterns
-
-2. **Incorporate only {non_elite_percentage}% of ideas from the NON-ELITE parent**
-   - Add small variations or complementary features
-   - Introduce minor diversity elements
-   - Test if specific small features provide benefit
-
-3. **Ensure coherent integration**
-   - The offspring must compile and run correctly
-   - The logic must flow naturally (not just code splicing)
-   - The {non_elite_percentage}% from non-elite should enhance, not disrupt the elite's core logic
-
-{"4. **Use reflection insight to guide selection**" if short_term_reflection else ""}
-{("   - Focus on preserving the aspects identified as superior in the reflection" if short_term_reflection else "")}
-{("   - Consider whether non-elite's features address any weaknesses mentioned" if short_term_reflection else "")}
-
-CONSTRAINTS - MUST FOLLOW:
+        _constraints_block = constraints if constraints is not None else """CONSTRAINTS - MUST FOLLOW:
 1. Package: EvoDestroy
 2. Implements: DestroyStrategy interface
 3. Method signature:
@@ -146,7 +103,61 @@ import Solution.Route;
 import Data.Instance;
 import java.util.Random;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.List;"""
+
+        prompt = f"""You are evolving strategies for {problem_description}.
+
+TASK: Perform BIASED CROSSOVER to create an offspring that inherits primarily from the elite parent.
+
+=== ELITE PARENT: {elite_class} (BETTER) ==={elite_idea_section}
+```{language}
+{elite_code}
+```
+
+PERFORMANCE:
+- Average Improvement: {elite_avg * 100:.3f}%
+- Per-instance results:
+{VRPAgentPrompts._format_results(elite_results)}
+
+=== NON-ELITE PARENT: {non_elite_class} (WORSE) ==={non_elite_idea_section}
+```{language}
+{non_elite_code}
+```
+
+PERFORMANCE:
+- Average Improvement: {non_elite_avg * 100:.3f}%
+- Per-instance results:
+{VRPAgentPrompts._format_results(non_elite_results)}
+
+Performance Gap: {(elite_avg - non_elite_avg) * 100:.3f} percentage points
+
+{"=== REFLECTION INSIGHT ===" if short_term_reflection else ""}
+{short_term_reflection if short_term_reflection else ""}
+
+=== CROSSOVER INSTRUCTION (VRPAGENT BIASED STRATEGY) ===
+
+**CRITICAL: This is a BIASED crossover favoring exploitation over exploration.**
+
+1. **Take {elite_percentage}% of ideas and logic from the ELITE parent**
+   - Preserve the core mechanism that makes it successful
+   - Keep the main selection strategy
+   - Maintain the effective interaction patterns
+
+2. **Incorporate only {non_elite_percentage}% of ideas from the NON-ELITE parent**
+   - Add small variations or complementary features
+   - Introduce minor diversity elements
+   - Test if specific small features provide benefit
+
+3. **Ensure coherent integration**
+   - The offspring must compile and run correctly
+   - The logic must flow naturally (not just code splicing)
+   - The {non_elite_percentage}% from non-elite should enhance, not disrupt the elite's core logic
+
+{"4. **Use reflection insight to guide selection**" if short_term_reflection else ""}
+{("   - Focus on preserving the aspects identified as superior in the reflection" if short_term_reflection else "")}
+{("   - Consider whether non-elite's features address any weaknesses mentioned" if short_term_reflection else "")}
+
+{_constraints_block}
 
 === OUTPUT FORMAT ===
 You MUST provide your response in TWO sections:
@@ -154,11 +165,9 @@ You MUST provide your response in TWO sections:
 ## IDEA
 [1-2 concise sentences describing the offspring strategy approach and why it was chosen. Be specific but brief.]
 
-Example: "Uses KNN-based clustering with {elite_percentage}% emphasis on the elite's cost-based seeding approach, chosen to preserve proven efficiency while adding minor diversity from non-elite's adaptive selection."
-
 ## CODE
-```java
-[Complete Java implementation]
+```{language}
+[Complete implementation]
 ```
 
 Return your response exactly in this format with both IDEA and CODE sections."""
@@ -172,7 +181,10 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         mutation_type: str,
         long_term_reflection: Optional[str] = None,
         mutation_strength: float = 0.3,
-        parent_idea: str = None
+        parent_idea: str = None,
+        problem_description: str = "a Vehicle Routing Problem (VRP) solver",
+        language: str = "java",
+        constraints: str = None,
     ) -> str:
         """
         VRPAGENT Typed Mutation + ReEvo Long-Term Reflection
@@ -180,12 +192,15 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         Four mutation types from VRPAGENT, guided by ReEvo's accumulated knowledge.
 
         Args:
-            elite_code: Elite strategy code
+            elite_code: Elite strategy source code
             elite_results: Elite's evaluation results
             mutation_type: One of ["ablation", "extend", "adjust_parameters", "refactor"]
             long_term_reflection: Optional accumulated knowledge from ReEvo
             mutation_strength: Mutation strength (0.0-1.0)
             parent_idea: High-level idea/concept of parent strategy
+            problem_description: Short description of what is being optimized
+            language: Programming language for code fences (e.g. "java", "python")
+            constraints: Domain constraints block. When None, falls back to AILS VRP defaults.
 
         Returns:
             Prompt for typed mutation with reflection guidance
@@ -295,32 +310,7 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 """
         }
 
-        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
-
-TASK: Apply {mutation_type.upper()} mutation to the elite destroy strategy.
-
-=== ELITE STRATEGY: {elite_class} ==={parent_idea_section}
-```java
-{elite_code}
-```
-
-PERFORMANCE:
-- Average Improvement: {elite_avg * 100:.3f}%
-- Per-instance results:
-{VRPAgentPrompts._format_results(elite_results)}
-
-{type_instructions[mutation_type]}
-
-Current Mutation Strength: {mutation_strength} ({VRPAgentPrompts._strength_label(mutation_strength)})
-
-{"=== ACCUMULATED EVOLUTIONARY KNOWLEDGE ===" if long_term_reflection else ""}
-{long_term_reflection if long_term_reflection else ""}
-{("**Use this knowledge to guide your mutation:**" if long_term_reflection else "")}
-{("- Apply proven principles when extending or adjusting" if long_term_reflection else "")}
-{("- Remove components that violate known good practices (ablation)" if long_term_reflection else "")}
-{("- Avoid introducing known anti-patterns" if long_term_reflection else "")}
-
-CONSTRAINTS - MUST FOLLOW:
+        _constraints_block = constraints if constraints is not None else """CONSTRAINTS - MUST FOLLOW:
 1. Package: EvoDestroy
 2. Implements: DestroyStrategy interface
 3. Method signature:
@@ -348,7 +338,34 @@ import Solution.Route;
 import Data.Instance;
 import java.util.Random;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.List;"""
+
+        prompt = f"""You are evolving strategies for {problem_description}.
+
+TASK: Apply {mutation_type.upper()} mutation to the elite strategy.
+
+=== ELITE STRATEGY: {elite_class} ==={parent_idea_section}
+```{language}
+{elite_code}
+```
+
+PERFORMANCE:
+- Average Improvement: {elite_avg * 100:.3f}%
+- Per-instance results:
+{VRPAgentPrompts._format_results(elite_results)}
+
+{type_instructions[mutation_type]}
+
+Current Mutation Strength: {mutation_strength} ({VRPAgentPrompts._strength_label(mutation_strength)})
+
+{"=== ACCUMULATED EVOLUTIONARY KNOWLEDGE ===" if long_term_reflection else ""}
+{long_term_reflection if long_term_reflection else ""}
+{("**Use this knowledge to guide your mutation:**" if long_term_reflection else "")}
+{("- Apply proven principles when extending or adjusting" if long_term_reflection else "")}
+{("- Remove components that violate known good practices (ablation)" if long_term_reflection else "")}
+{("- Avoid introducing known anti-patterns" if long_term_reflection else "")}
+
+{_constraints_block}
 
 === OUTPUT FORMAT ===
 You MUST provide your response in TWO sections:
@@ -356,11 +373,9 @@ You MUST provide your response in TWO sections:
 ## IDEA
 [1-2 concise sentences describing the mutated strategy approach and why this {mutation_type} mutation was chosen. Be specific but brief.]
 
-Example: "Reduces KNN neighbor count from 10 to 6 and adds early termination when cluster reaches target size, chosen to improve efficiency while maintaining spatial coherence."
-
 ## CODE
-```java
-[Complete Java implementation]
+```{language}
+[Complete implementation]
 ```
 
 Return your response exactly in this format with both IDEA and CODE sections."""
@@ -460,7 +475,10 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         insight_type: str,
         idea: str,
         related_candidates: Optional[List[Dict[str, Any]]] = None,
-        long_term_reflection: Optional[str] = None
+        long_term_reflection: Optional[str] = None,
+        problem_description: str = "a Vehicle Routing Problem (VRP) solver",
+        language: str = "java",
+        constraints: str = None,
     ) -> str:
         """
         Generate strategy guided by user insight.
@@ -526,7 +544,7 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 IDEA: {cand_idea}
 FITNESS: {cand_fitness * 100:.4f}% (avg improvement: {avg_improvement * 100:.3f}%)
 
-```java
+```{language}
 {cand_code}
 ```
 """
@@ -607,13 +625,7 @@ You are combining multiple strategies based on the user's vision.
 - Avoid known anti-patterns while implementing
 """
 
-        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
-
-{type_instruction}
-{related_section}
-{reflection_section}
-
-=== CONSTRAINTS - MUST FOLLOW ===
+        _constraints_block = constraints if constraints is not None else """=== CONSTRAINTS - MUST FOLLOW ===
 1. Package: EvoDestroy
 2. Implements: DestroyStrategy interface
 3. Method signature:
@@ -644,7 +656,15 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
-import java.util.Set;
+import java.util.Set;"""
+
+        prompt = f"""You are evolving strategies for {problem_description}.
+
+{type_instruction}
+{related_section}
+{reflection_section}
+
+{_constraints_block}
 
 === OUTPUT FORMAT ===
 You MUST provide your response in TWO sections:
@@ -653,8 +673,8 @@ You MUST provide your response in TWO sections:
 [1-2 concise sentences summarizing the implemented strategy and how it realizes the user's vision]
 
 ## CODE
-```java
-[Complete Java implementation]
+```{language}
+[Complete implementation]
 ```
 
 Return your response exactly in this format with both IDEA and CODE sections."""

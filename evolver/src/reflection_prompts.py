@@ -5,7 +5,8 @@ Following the ReEvo framework:
 - Short-Term Reflection: Compares two parents to guide crossover
 - Long-Term Reflection: Accumulates knowledge over generations to guide mutation
 
-Adapted for VRP AILS Destroy Strategy Evolution
+Domain-agnostic: pass ``problem_context``, ``language``, and ``constraints`` to
+override the built-in AILS/VRP defaults.
 """
 from __future__ import annotations
 from loguru import logger
@@ -19,7 +20,8 @@ class ReflectionPrompts:
         better_results: dict,
         worse_code: str,
         worse_results: dict,
-        problem_context: str = "Vehicle Routing Problem (VRP) with AILS"
+        problem_context: str = "Vehicle Routing Problem (VRP) with AILS",
+        language: str = "java",
     ) -> str:
         """
         Short-Term Reflection Prompt
@@ -28,11 +30,12 @@ class ReflectionPrompts:
         Used to guide crossover generation.
 
         Args:
-            better_code: Java code of better-performing strategy
+            better_code: Source code of better-performing strategy
             better_results: Evaluation results for better strategy
-            worse_code: Java code of worse-performing strategy
+            worse_code: Source code of worse-performing strategy
             worse_results: Evaluation results for worse strategy
-            problem_context: Problem description
+            problem_context: Problem description (used in prompt framing)
+            language: Programming language for code fences (e.g. "java", "python")
 
         Returns:
             Prompt string for LLM reflection
@@ -46,12 +49,12 @@ class ReflectionPrompts:
         better_class = ReflectionPrompts._extract_class_name(better_code)
         worse_class = ReflectionPrompts._extract_class_name(worse_code)
 
-        prompt = f"""You are a heuristic expert analyzing destroy strategies for {problem_context}.
+        prompt = f"""You are a heuristic expert analyzing strategies for {problem_context}.
 
-You have evaluated two different destroy strategies (Strategy A and Strategy B) on the same VRP instances with warmstart solutions.
+You have evaluated two different strategies (Strategy A and Strategy B) on the same test instances.
 
 === STRATEGY A: {better_class} ===
-```java
+```{language}
 {better_code}
 ```
 
@@ -61,7 +64,7 @@ PERFORMANCE OF STRATEGY A:
 {ReflectionPrompts._format_results(better_results)}
 
 === STRATEGY B: {worse_class} ===
-```java
+```{language}
 {worse_code}
 ```
 
@@ -111,7 +114,8 @@ Keep your analysis technical, specific, and actionable for guiding crossover gen
     def long_term_reflection(
         recent_short_term_reflections: list[str],
         previous_long_term_reflection: str = None,
-        generation: int = 0
+        generation: int = 0,
+        problem_context: str = "VRP destroy strategies",
     ) -> str:
         """
         Long-Term Reflection Prompt
@@ -127,9 +131,9 @@ Keep your analysis technical, specific, and actionable for guiding crossover gen
         Returns:
             Prompt string for LLM reflection
         """
-        prompt = f"""You are a heuristic expert observing the evolution of VRP destroy strategies over multiple generations.
+        prompt = f"""You are a heuristic expert observing the evolution of {problem_context} over multiple generations.
 
-You have been tracking the evolution for {generation} generations. Your goal is to maintain a concise yet comprehensive knowledge base of what makes destroy strategies effective for VRP end-game optimization (starting from warmstart solutions and improving over 10,000 iterations).
+You have been tracking the evolution for {generation} generations. Your goal is to maintain a concise yet comprehensive knowledge base of what makes {problem_context} effective.
 
 === CURRENT ACCUMULATED KNOWLEDGE ===
 {previous_long_term_reflection if previous_long_term_reflection else "No previous knowledge yet (this is generation 0)."}
@@ -192,7 +196,9 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
         worse_code: str,
         short_term_insight: str,
         parent1_idea: str = None,
-        parent2_idea: str = None
+        parent2_idea: str = None,
+        language: str = "java",
+        constraints: str = None,
     ) -> str:
         """
         Crossover Prompt with Short-Term Reflection Guidance
@@ -200,11 +206,14 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
         Used to generate offspring from two parents using insights from short-term reflection.
 
         Args:
-            better_code: Better parent's code
-            worse_code: Worse parent's code
+            better_code: Better parent's source code
+            worse_code: Worse parent's source code
             short_term_insight: Insight from short-term reflection comparing these parents
             parent1_idea: High-level idea/concept of parent 1 (better)
             parent2_idea: High-level idea/concept of parent 2 (worse)
+            language: Programming language for code fences (e.g. "java", "python")
+            constraints: Domain constraints block (interface contract, data structures, imports).
+                         When None, falls back to built-in AILS VRP defaults.
 
         Returns:
             Prompt for LLM to generate crossover offspring
@@ -216,30 +225,7 @@ Keep each principle concise (1-2 sentences) and directly actionable for guiding 
         parent1_idea_section = f"\nPARENT 1 IDEA: {parent1_idea}\n" if parent1_idea else ""
         parent2_idea_section = f"\nPARENT 2 IDEA: {parent2_idea}\n" if parent2_idea else ""
 
-        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
-
-TASK: Combine two parent strategies to create an offspring that inherits the strengths of both, guided by comparative analysis.
-
-=== PARENT 1 (BETTER PERFORMER): {better_class} ==={parent1_idea_section}
-```java
-{better_code}
-```
-
-=== PARENT 2 (WORSE PERFORMER): {worse_class} ==={parent2_idea_section}
-```java
-{worse_code}
-```
-
-=== REFLECTION INSIGHT (Why Parent 1 > Parent 2) ===
-{short_term_insight}
-
-=== YOUR TASK ===
-Create an offspring strategy that:
-1. **Inherits the superior logic** from Parent 1 (as identified in the reflection)
-2. **Considers useful diversity** from Parent 2 (if it has complementary strengths)
-3. **Synthesizes coherently** - don't just splice code randomly; create a unified approach
-
-CONSTRAINTS - MUST FOLLOW:
+        _constraints_block = constraints if constraints is not None else """CONSTRAINTS - MUST FOLLOW:
 1. Package: EvoDestroy
 2. Implements: DestroyStrategy interface
 3. Method signature:
@@ -266,7 +252,32 @@ import Solution.Route;
 import Data.Instance;
 import java.util.Random;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.List;"""
+
+        prompt = f"""You are evolving strategies for an optimization problem.
+
+TASK: Combine two parent strategies to create an offspring that inherits the strengths of both, guided by comparative analysis.
+
+=== PARENT 1 (BETTER PERFORMER): {better_class} ==={parent1_idea_section}
+```{language}
+{better_code}
+```
+
+=== PARENT 2 (WORSE PERFORMER): {worse_class} ==={parent2_idea_section}
+```{language}
+{worse_code}
+```
+
+=== REFLECTION INSIGHT (Why Parent 1 > Parent 2) ===
+{short_term_insight}
+
+=== YOUR TASK ===
+Create an offspring strategy that:
+1. **Inherits the superior logic** from Parent 1 (as identified in the reflection)
+2. **Considers useful diversity** from Parent 2 (if it has complementary strengths)
+3. **Synthesizes coherently** - don't just splice code randomly; create a unified approach
+
+{_constraints_block}
 
 CROSSOVER GUIDANCE:
 - The reflection identified what makes Parent 1 better - make sure to preserve that
@@ -280,11 +291,9 @@ You MUST provide your response in TWO sections:
 ## IDEA
 [1-2 concise sentences describing the offspring strategy approach and why it was chosen. Be specific but brief.]
 
-Example: "Uses KNN-based clustering starting from high-cost nodes to select spatially coherent regions for removal, chosen because clustered removal improves repair efficiency while cost-based seeding targets problematic areas."
-
 ## CODE
-```java
-[Complete Java implementation]
+```{language}
+[Complete implementation]
 ```
 
 Return your response exactly in this format with both IDEA and CODE sections."""
@@ -297,7 +306,9 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         elite_results: dict,
         long_term_knowledge: str,
         mutation_strength: float = 0.3,
-        parent_idea: str = None
+        parent_idea: str = None,
+        language: str = "java",
+        constraints: str = None,
     ) -> str:
         """
         Mutation Prompt with Long-Term Reflection Guidance
@@ -305,11 +316,13 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         Used to mutate the elite strategy using accumulated knowledge.
 
         Args:
-            elite_code: Current elite strategy code
+            elite_code: Current elite strategy source code
             elite_results: Evaluation results for elite
             long_term_knowledge: Accumulated knowledge from long-term reflection
             mutation_strength: Mutation strength (0.0-1.0)
             parent_idea: High-level idea/concept of parent strategy
+            language: Programming language for code fences (e.g. "java", "python")
+            constraints: Domain constraints block. When None, falls back to AILS VRP defaults.
 
         Returns:
             Prompt for LLM to generate mutated strategy
@@ -322,12 +335,41 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         # Include parent idea if available
         parent_idea_section = f"\nPARENT IDEA: {parent_idea}\n" if parent_idea else ""
 
-        prompt = f"""You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
+        _constraints_block = constraints if constraints is not None else """CONSTRAINTS - MUST FOLLOW:
+1. Package: EvoDestroy
+2. Implements: DestroyStrategy interface
+3. Method signature:
+   Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
+                              Node[] nodes, Instance instance, Random rand)
+4. Return array size <= numToRemove
+5. Only select nodes where: node.nodeBelong == true AND node.name != 0
+6. Use provided Random instance (rand), do not create new Random()
+7. No file I/O, no external libraries, no System.out
+8. Single class only
+9. Deterministic for same seed
 
-TASK: Mutate the current elite destroy strategy to improve solution quality, guided by accumulated evolutionary knowledge.
+AVAILABLE DATA STRUCTURES:
+- routes[i]: Route object with first (depot), totalDemand, fRoute (cost)
+- nodes[i]: Node object with name (ID), demand, knn[] (nearest neighbors), route (parent)
+- instance.dist(i, j): Distance between nodes i and j
+- node.knn[k]: k-th nearest neighbor ID
+- route.first.next: First customer in route
+- node.next, node.prev: Linked list pointers
+
+IMPORTS REQUIRED:
+import Solution.Node;
+import Solution.Route;
+import Data.Instance;
+import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;"""
+
+        prompt = f"""You are evolving strategies for an optimization problem.
+
+TASK: Mutate the current elite strategy to improve solution quality, guided by accumulated evolutionary knowledge.
 
 === CURRENT ELITE STRATEGY: {elite_class} ==={parent_idea_section}
-```java
+```{language}
 {elite_code}
 ```
 
@@ -362,34 +404,7 @@ Strategy:
    - Don't break working logic
    - Keep the overall approach unified
 
-CONSTRAINTS - MUST FOLLOW:
-1. Package: EvoDestroy
-2. Implements: DestroyStrategy interface
-3. Method signature:
-   Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                              Node[] nodes, Instance instance, Random rand)
-4. Return array size <= numToRemove
-5. Only select nodes where: node.nodeBelong == true AND node.name != 0
-6. Use provided Random instance (rand), do not create new Random()
-7. No file I/O, no external libraries, no System.out
-8. Single class only
-9. Deterministic for same seed
-
-AVAILABLE DATA STRUCTURES:
-- routes[i]: Route object with first (depot), totalDemand, fRoute (cost)
-- nodes[i]: Node object with name (ID), demand, knn[] (nearest neighbors), route (parent)
-- instance.dist(i, j): Distance between nodes i and j
-- node.knn[k]: k-th nearest neighbor ID
-- route.first.next: First customer in route
-- node.next, node.prev: Linked list pointers
-
-IMPORTS REQUIRED:
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
+{_constraints_block}
 
 === OUTPUT FORMAT ===
 You MUST provide your response in TWO sections:
@@ -397,11 +412,9 @@ You MUST provide your response in TWO sections:
 ## IDEA
 [1-2 concise sentences describing the mutated strategy approach and why this mutation was chosen. Be specific but brief.]
 
-Example: "Combines KNN-based clustering with adaptive cluster radius based on numToRemove, chosen to improve scalability while preserving the spatial locality that makes the parent effective."
-
 ## CODE
-```java
-[Complete Java implementation]
+```{language}
+[Complete implementation]
 ```
 
 Return your response exactly in this format with both IDEA and CODE sections."""

@@ -103,9 +103,10 @@ class Evaluator:
                    class_name: str,
                    seed: int = 42,
                    iterations: int = 500,
-                   timeout: int = 120) -> Dict[str, Any]:
+                   timeout: int = 120,
+                   instance: str = None) -> Dict[str, Any]:
         """
-        Run smoke test on smallest instance.
+        Run smoke test on a single instance.
 
         Args:
             jar_path: Path to plugin JAR
@@ -113,11 +114,12 @@ class Evaluator:
             seed: Random seed
             iterations: Number of iterations
             timeout: Timeout in seconds
+            instance: Instance name (without .vrp). If None, uses the smallest
+                      available instance by file size.
 
         Returns:
             Dictionary with smoke test results
         """
-        # Use smallest available instance in the data directory
         vrp_files = list(self.data_dir.glob("*.vrp"))
         if not vrp_files:
             logger.error(f"[SMOKE TEST ERROR] No .vrp files found in {self.data_dir}")
@@ -128,8 +130,16 @@ class Evaluator:
                 "exit_code": -1
             }
 
-        # Pick smallest instance by file size (smaller files = fewer nodes)
-        instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
+        if instance:
+            name = instance if instance.endswith(".vrp") else f"{instance}.vrp"
+            instance_file = self.data_dir / name
+            if not instance_file.exists():
+                logger.warning(f"[SMOKE TEST] Configured instance {name} not found in "
+                               f"{self.data_dir}, falling back to smallest")
+                instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
+        else:
+            # Pick smallest instance by file size (smaller files = fewer nodes)
+            instance_file = min(vrp_files, key=lambda f: f.stat().st_size)
         logger.debug(f"[SMOKE TEST] Using instance: {instance_file.name}")
 
         output_sol = self.temp_dir / f"smoke_test_{class_name}.sol"

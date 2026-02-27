@@ -43,10 +43,15 @@ import domains  # noqa: F401 — triggers auto-registration of all domain plugin
 # TODO: Where do we want this to go? Parameter? Static internal path? Configuration file?
 DB_PATH = os.getenv("EVOCODE_DB_PATH", "/data/evolution.db")
 
-def init_db() -> None:
-    """Function to initialize empty database with empty tables"""
-    # TODO: - We should allow this to be configured through parameters, but for now we will mostly hardcode behaviour
-    #       - We also need to add support for resuming; presently we will just overwrite the same DB
+def init_db(clear: bool = False) -> None:
+    """Initialize the database, optionally clearing all rows from a previous run.
+
+    Args:
+        clear: If True, DELETE all rows before creating tables. Pass True on a
+               fresh (non-resume) run to prevent stale generations from a prior
+               experiment bleeding into the UI.
+    """
+    # TODO: Allow DB_PATH to be configured through parameters
     logger.debug(f"[DB INIT] Checking database at {DB_PATH}...")
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
@@ -68,13 +73,6 @@ def init_db() -> None:
                 additional_metrics TEXT
             )
         """)
-
-        # Migration logic (safe to keep)
-        try:
-            conn.execute("SELECT additional_metrics FROM metrics LIMIT 1")
-        except sqlite3.OperationalError:
-            logger.debug("[DB INIT] Migrating DB: Adding additional_metrics column...")
-            conn.execute("ALTER TABLE metrics ADD COLUMN additional_metrics TEXT")
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS snapshots (
@@ -106,6 +104,20 @@ def init_db() -> None:
             )
         """)
 
+        # Migration logic (safe to keep — all tables exist at this point)
+        try:
+            conn.execute("SELECT additional_metrics FROM metrics LIMIT 1")
+        except sqlite3.OperationalError:
+            logger.debug("[DB INIT] Migrating DB: Adding additional_metrics column...")
+            conn.execute("ALTER TABLE metrics ADD COLUMN additional_metrics TEXT")
+
+        if clear:
+            logger.debug("[DB INIT] Clearing stale rows from previous run...")
+            conn.execute("DELETE FROM metrics")
+            conn.execute("DELETE FROM snapshots")
+            conn.execute("DELETE FROM reflections")
+            conn.execute("DELETE FROM strategies")
+
     logger.debug("[DB INIT] Database initialized.")
 
 @dataclass
@@ -134,15 +146,15 @@ class EvolutionLoop:
     """Manages the evolutionary search loop with reflection."""
 
     def __init__(self,
-                 population_size: int = 10,
-                 elite_ratio: float = 0.2,
-                 mutation_rate: float = 0.7,
-                 crossover_rate: float = 0.3,
+                 population_size: int = None,
+                 elite_ratio: float = None,
+                 mutation_rate: float = None,
+                 crossover_rate: float = None,
                  target_instances: List[str] = None,
-                 seed: int = 42,
-                 use_vrpagent: bool = True,
-                 code_length_penalty_alpha: float = 0.001,
-                 debug: bool = True,
+                 seed: int = None,
+                 use_vrpagent: bool = None,
+                 code_length_penalty_alpha: float = None,
+                 debug: bool = None,
                  user_insight: Optional[List[Dict[str, Any]]] = None,
                  num_workers: int = 2,
                  instance_workers: str | int = "auto",
@@ -155,17 +167,24 @@ class EvolutionLoop:
         """
         Initialize evolution loop.
 
+        Parameter resolution follows a 3-level priority chain:
+            explicit constructor arg (not None) → config dict value → hardcoded default
+
+        Pass ``None`` (or omit) any scalar param to let it be read from ``config``.
+        The hardcoded defaults below are used only when neither an explicit arg nor a
+        config value is provided.
+
         Args:
-            population_size: Number of candidates in population
-            elite_ratio: Ratio of elites to preserve
-            mutation_rate: Probability of mutation vs crossover
-            crossover_rate: Probability of crossover (1 - mutation_rate)
-            target_instances: List of instance names for evaluation. If None, taken from
-                              the domain plugin (via evaluator.get_instances()).
-            seed: Random seed
-            use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
-            code_length_penalty_alpha: VRPAGENT code length penalty coefficient
-            debug: If True, show all output. If False, only show reflections and best candidate per generation
+            population_size: Number of candidates in population (default 10)
+            elite_ratio: Ratio of elites to preserve (default 0.2)
+            mutation_rate: Probability of mutation vs crossover (default 0.7)
+            crossover_rate: Probability of crossover (1 - mutation_rate) (default 0.3)
+            target_instances: List of instance names for evaluation. Priority:
+                              explicit arg > config["target_instances"] > evaluator.get_instances()
+            seed: Random seed (default 42)
+            use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations) (default True)
+            code_length_penalty_alpha: VRPAGENT code length penalty coefficient (default 0.0)
+            debug: If True, show all output. If False, only show reflections and best candidate per generation (default True)
             user_insight: List of user-provided insights for guiding evolution. Each insight is a dict with:
                 - type: "initialize" | "mutate" | "crossover"
                 - idea: str describing the user's concept
@@ -183,13 +202,27 @@ class EvolutionLoop:
         """
         mo = multi_objective or MultiObjectiveConfig()
 
-        self.population_size = population_size
-        self.elite_size = int(population_size * elite_ratio)
-        self.mutation_rate = mutation_rate
-        self.crossover_rate = crossover_rate
-        self.use_vrpagent = use_vrpagent
-        self.code_length_penalty_alpha = code_length_penalty_alpha
-        self.debug = debug
+        # --- 3-level resolution: explicit arg → config value → hardcoded default ---
+        _conf = config or {}
+
+        def _r(val, key, default):
+            """Return val if explicitly provided (not None), else config[key], else default."""
+            return val if val is not None else _conf.get(key, default)
+
+        self.population_size           = _r(population_size,            "population_size",            10)
+        _elite_ratio                   = _r(elite_ratio,                "elite_ratio",                0.2)
+        self.elite_size                = int(self.population_size * _elite_ratio)
+        self.mutation_rate             = _r(mutation_rate,              "mutation_rate",              0.7)
+        self.crossover_rate            = _r(crossover_rate,             "crossover_rate",             0.3)
+        self.use_vrpagent              = _r(use_vrpagent,               "use_vrpagent",               True)
+        self.code_length_penalty_alpha = _r(code_length_penalty_alpha,  "code_length_penalty_alpha",  0.0)
+        self.debug                     = _r(debug,                      "debug",                      True)
+        self.resume                    = _conf.get("resume", False)
+        _seed                          = _r(seed,                       "seed",                       42)
+        _max_parallel = (max_parallel_evals
+                         if max_parallel_evals is not None
+                         else _conf.get("max_parallel_evals"))
+
         self.user_insight = user_insight
         self.selection_mode = mo.selection_mode
         self.maximize_scores = mo.maximize_scores
@@ -231,17 +264,23 @@ class EvolutionLoop:
         else:
             self.evaluator = _get_plugin().get_evaluator()
 
-        # Target instances: explicit arg > evaluator's own list
+        # Target instances: explicit arg > config list > evaluator's own list
         if target_instances is not None:
             self.target_instances = target_instances
+        elif _conf.get("target_instances"):
+            self.target_instances = list(_conf["target_instances"])
         else:
             self.target_instances = self.evaluator.get_instances()
 
+        # Keep evaluator in sync — it uses self.target_instances internally
+        if hasattr(self.evaluator, "target_instances"):
+            self.evaluator.target_instances = self.target_instances
+
         # Handle max_parallel_evals: controls TOTAL parallelization budget
-        if max_parallel_evals is not None:
+        if _max_parallel is not None:
             num_instances = len(self.target_instances)
-            self.instance_workers = min(num_instances, max_parallel_evals)
-            self.num_workers = max(1, max_parallel_evals // self.instance_workers)
+            self.instance_workers = min(num_instances, _max_parallel)
+            self.num_workers = max(1, _max_parallel // self.instance_workers)
         else:
             self.num_workers = num_workers
             self.instance_workers = instance_workers
@@ -278,14 +317,14 @@ class EvolutionLoop:
         self._prev_iteration_best = 0.0  # Track improvement trends
         self._generation_start_counter = 0  # Track candidates tested per generation
 
-        random.seed(seed)
+        random.seed(_seed)
 
         # Extra DB data
         self.history = {}
         self.strategy_registry: Dict = {}
 
         if self.visualize:
-            init_db()
+            init_db(clear=not self.resume)
 
     @staticmethod
     def _get_instance_workers_static(instance_workers, num_workers: int, num_instances: int) -> int:
@@ -1015,6 +1054,9 @@ class EvolutionLoop:
             self.population = self.population[:self.population_size]
 
         logger.debug(f"[SELECTION] Population after selection: {len(self.population)} candidates")
+        if not self.population:
+            logger.warning("[SELECTION] Population is empty — all candidates failed this generation")
+            return
         logger.debug(f"[SELECTION] Top fitness: {self.population[0]['fitness']*100:.4f}%")
         logger.debug(f"[SELECTION] Worst fitness: {self.population[-1]['fitness']*100:.4f}%")
 

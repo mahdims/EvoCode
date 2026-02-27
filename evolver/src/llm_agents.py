@@ -38,15 +38,14 @@ try:
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
-    logger.warning("[WARNING] google-genai not installed. Using template-based generation only.")
+    logger.debug("[google-genai] not installed — Gemini provider unavailable (pip install google-genai to enable)")
 
 try:
     from openai import OpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    logger.warning("[WARNING] openai not installed. Using template-based generation only.")
-    logger.info("Install with: pip install openai")
+    logger.debug("[openai] not installed — OpenAI provider unavailable (pip install openai to enable)")
 
 class LLMAgents:
     """LLM-powered agents for evolutionary operators."""
@@ -224,7 +223,7 @@ class LLMAgents:
         Enhanced with VRPAGENT typed mutations (ablation, extend, adjust_parameters, refactor).
 
         Args:
-            parent_code: Java source code of parent strategy
+            parent_code: Strategy source code of parent
             parent_results: Evaluation results for parent (required for typed mutations)
             long_term_reflection: Accumulated knowledge to guide mutation
             mutation_strength: How much to mutate (0.0-1.0)
@@ -234,7 +233,7 @@ class LLMAgents:
             parent_idea: High-level idea/concept of parent strategy
 
         Returns:
-            (idea, code) tuple with idea description and Java source code
+            (idea, code) tuple with idea description and strategy source code
         """
         from reflection_prompts import ReflectionPrompts
         from vrpagent_prompts import VRPAgentPrompts
@@ -247,7 +246,10 @@ class LLMAgents:
                 mutation_type=mutation_type,
                 long_term_reflection=long_term_reflection,
                 mutation_strength=mutation_strength,
-                parent_idea=parent_idea
+                parent_idea=parent_idea,
+                problem_description=self.PROBLEM_DESCRIPTION,
+                language=self.LANGUAGE,
+                constraints=self.CONSTRAINTS,
             )
             logger.debug(f"[LLM MUTATION] Using VRPAGENT {mutation_type} mutation + reflection")
         elif long_term_reflection and parent_results:
@@ -257,7 +259,9 @@ class LLMAgents:
                 elite_results=parent_results,
                 long_term_knowledge=long_term_reflection,
                 mutation_strength=mutation_strength,
-                parent_idea=parent_idea
+                parent_idea=parent_idea,
+                language=self.LANGUAGE,
+                constraints=self.CONSTRAINTS,
             )
             logger.debug(f"[LLM MUTATION] Using ReEvo long-term reflection-guided mutation")
         else:
@@ -315,7 +319,7 @@ class LLMAgents:
             parent2_idea: High-level idea/concept of parent 2 (worse)
 
         Returns:
-            (idea, code) tuple with idea description and Java source code
+            (idea, code) tuple with idea description and strategy source code
         """
         from reflection_prompts import ReflectionPrompts
         from vrpagent_prompts import VRPAgentPrompts
@@ -330,7 +334,10 @@ class LLMAgents:
                 short_term_reflection=short_term_reflection,
                 elite_bias=elite_bias,
                 elite_idea=parent1_idea,
-                non_elite_idea=parent2_idea
+                non_elite_idea=parent2_idea,
+                problem_description=self.PROBLEM_DESCRIPTION,
+                language=self.LANGUAGE,
+                constraints=self.CONSTRAINTS,
             )
             logger.debug(f"[LLM CROSSOVER] Using VRPAGENT biased crossover (bias={elite_bias:.0%}) + reflection")
         elif short_term_reflection:
@@ -340,7 +347,9 @@ class LLMAgents:
                 worse_code=parent2_code,
                 short_term_insight=short_term_reflection,
                 parent1_idea=parent1_idea,
-                parent2_idea=parent2_idea
+                parent2_idea=parent2_idea,
+                language=self.LANGUAGE,
+                constraints=self.CONSTRAINTS,
             )
             logger.debug(f"[LLM CROSSOVER] Using ReEvo reflection-guided crossover")
         else:
@@ -394,7 +403,7 @@ class LLMAgents:
             long_term_reflection: Optional accumulated evolutionary knowledge
 
         Returns:
-            (idea, code) tuple with generated idea description and Java source code
+            (idea, code) tuple with generated idea description and strategy source code
         """
         from vrpagent_prompts import VRPAgentPrompts
 
@@ -402,7 +411,10 @@ class LLMAgents:
             insight_type=insight_type,
             idea=idea,
             related_candidates=related_candidates,
-            long_term_reflection=long_term_reflection
+            long_term_reflection=long_term_reflection,
+            problem_description=self.PROBLEM_DESCRIPTION,
+            language=self.LANGUAGE,
+            constraints=self.CONSTRAINTS,
         )
 
         logger.debug(f"[LLM USER_INSIGHT] Type: {insight_type}")
@@ -441,9 +453,9 @@ class LLMAgents:
         Used to guide crossover by identifying why one strategy outperforms another.
 
         Args:
-            better_code: Java source code of better-performing strategy
+            better_code: Source code of better-performing strategy
             better_results: Evaluation results for better strategy
-            worse_code: Java source code of worse-performing strategy
+            worse_code: Source code of worse-performing strategy
             worse_results: Evaluation results for worse strategy
 
         Returns:
@@ -455,7 +467,9 @@ class LLMAgents:
             better_code=better_code,
             better_results=better_results,
             worse_code=worse_code,
-            worse_results=worse_results
+            worse_results=worse_results,
+            problem_context=self.PROBLEM_DESCRIPTION,
+            language=self.LANGUAGE,
         )
 
         if self.use_llm:
@@ -557,7 +571,8 @@ Consider combining the superior selection criteria with complementary diversific
         prompt = ReflectionPrompts.long_term_reflection(
             recent_short_term_reflections=recent_short_term_reflections,
             previous_long_term_reflection=previous_long_term_reflection,
-            generation=generation
+            generation=generation,
+            problem_context=self.PROBLEM_DESCRIPTION,
         )
 
         reflection = None
@@ -889,8 +904,8 @@ Return only the complete {self.LANGUAGE} code, no explanations, no markdown.
         # Find ## IDEA section (just 1-2 sentences, not structured)
         idea_match = re.search(r'##\s*IDEA\s*[:\s]*(.*?)(?=##\s*CODE|\Z)', llm_response, re.DOTALL | re.IGNORECASE)
 
-        # Find ## CODE section with java block
-        code_match = re.search(r'##\s*CODE\s*\n```java\s*\n(.*?)\n```', llm_response, re.DOTALL | re.IGNORECASE)
+        # Find ## CODE section — accept any language tag (java, python, etc.)
+        code_match = re.search(r'##\s*CODE\s*\n```\w*\s*\n(.*?)\n```', llm_response, re.DOTALL | re.IGNORECASE)
 
         if not idea_match or not code_match:
             logger.error("[PARSE ERROR] Missing IDEA or CODE section in LLM response")

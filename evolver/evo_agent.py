@@ -37,6 +37,13 @@ def load_config(config_path: str = None) -> dict:
         config_path = Path(__file__).parent / "config.json"
     else:
         config_path = Path(config_path)
+        # If the given path is relative and doesn't exist from CWD, also try
+        # the directory that contains evo_agent.py (so the user can run from
+        # the repo root with just "config.json" instead of "evolver/config.json")
+        if not config_path.is_absolute() and not config_path.exists():
+            script_relative = Path(__file__).parent / config_path
+            if script_relative.exists():
+                config_path = script_relative
 
     if not config_path.exists():
         logger.warning(f"[CONFIG] Config file not found: {config_path}")
@@ -66,6 +73,7 @@ def get_default_config() -> dict:
 
         # Dataset configuration
         "dataset_dir": "Vrp_Set_X",
+        "smoke_test_instance": None,
         "target_instances": ["X-n101-k25", "X-n106-k14"],
 
         # VRPAGENT settings
@@ -171,22 +179,14 @@ def run_evolution(config: dict, visualize: bool = False):
         maximize_scores=config.get("maximize_scores"),
     )
 
-    # Create evolution loop
+    # Create evolution loop — scalar params (population_size, seed, code_length_penalty_alpha, …)
+    # are read directly from config inside EvolutionLoop via the 3-level priority chain:
+    #   explicit constructor arg (not None) → config dict value → hardcoded default
     evolution = EvolutionLoop(
-        population_size=config["population_size"],
-        elite_ratio=config["elite_ratio"],
-        mutation_rate=config["mutation_rate"],
-        crossover_rate=config["crossover_rate"],
-        target_instances=config.get("target_instances"),
-        use_vrpagent=config["use_vrpagent"],
-        code_length_penalty_alpha=config["code_length_penalty_alpha"],
-        seed=config["seed"],
-        max_parallel_evals=config.get("max_parallel_evals"),
-        debug=debug,
         user_insight=user_insight,
         multi_objective=mo_config,
         visualize=visualize,
-        config=config
+        config=config,
     )
 
     # Initialize or resume population

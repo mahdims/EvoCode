@@ -24,7 +24,8 @@ class AILSEvaluator(BaseEvaluator):
                  max_workers: int = None,
                  seed: int = 42,
                  iterations: int = 10000,
-                 timeout: int = 3600):
+                 timeout: int = 3600,
+                 smoke_test_instance: Optional[str] = None):
         self._inner = Evaluator(
             ails_jar=ails_jar,
             data_dir=data_dir,
@@ -36,12 +37,14 @@ class AILSEvaluator(BaseEvaluator):
         self.seed = seed
         self.iterations = iterations
         self.timeout = timeout
+        self.smoke_test_instance = smoke_test_instance
 
     def smoke_test(self, artifact_path: str, candidate_name: str) -> SmokeTestResult:
         result = self._inner.smoke_test(
             jar_path=artifact_path,
             class_name=candidate_name,
             seed=self.seed,
+            instance=self.smoke_test_instance,
         )
         return SmokeTestResult(
             success=result["success"],

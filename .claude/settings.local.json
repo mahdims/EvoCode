@@ -17,7 +17,8 @@
       "Bash(\"/e/Work/OptvEvolve/EvoCode/evolver/src/evaluator_stub.py\":*)",
       "Bash(javac:*)",
       "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/setup.sh\":*)",
-      "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/run_evolution.sh\":*)"
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/run_evolution.sh\":*)",
+      "Bash(source .venv/Scripts/activate)"
     ]
   }
 }
