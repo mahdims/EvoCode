@@ -79,6 +79,14 @@ def get_default_config() -> dict:
         # Pluggable evaluator settings
         "evaluator_script": None,
         "evaluator_config": {},
+
+        # Pluggable builder settings
+        # Set "builder_script" to a Python file path to use a custom builder.
+        # Example: "builder_script": "my_domain/builder.py:MyBuilder"
+        # When not set, defaults to AILSBuilder (backward-compatible).
+        "builder_script": None,
+        "builder_config": {},
+
         "selection_mode": "scalar",
         "fitness_aggregation": "mean",
         "score_weights": None,
@@ -169,8 +177,7 @@ def run_evolution(config: dict):
         elite_ratio=config["elite_ratio"],
         mutation_rate=config["mutation_rate"],
         crossover_rate=config["crossover_rate"],
-        dataset_dir=config["dataset_dir"],
-        target_instances=config["target_instances"],
+        target_instances=config.get("target_instances"),
         use_vrpagent=config["use_vrpagent"],
         code_length_penalty_alpha=config["code_length_penalty_alpha"],
         seed=config["seed"],
@@ -179,6 +186,8 @@ def run_evolution(config: dict):
         user_insight=user_insight,
         multi_objective=mo_config,
         config=config,
+        # builder=None means EvolutionLoop will call create_builder(config, ails_jar)
+        # automatically — which respects the "builder_script" config key.
     )
 
     # Initialize or resume population

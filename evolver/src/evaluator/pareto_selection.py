@@ -21,7 +21,7 @@ def compute_candidate_score_vector(eval_results, score_names: List[str]) -> Dict
     Returns:
         Dict mapping score name to mean value across successful instances
     """
-    from .base_evaluator import EvalResult
+    from core.base_evaluator import EvalResult
 
     successful = [r for r in eval_results if r.success]
     if not successful:

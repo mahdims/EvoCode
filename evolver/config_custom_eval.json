@@ -7,6 +7,7 @@
     "num_generations": 5,
     "num_seeds": 2,
     "reflection_frequency": 2,
+    "source_code_root": "../AILS",
     "dataset_dir": "Vrp_Set_X",
     "target_instances": [
         "X-n266-k58",
@@ -21,7 +22,7 @@
     "verbose": 1,
     "user_insight": "",
 
-    "evaluator_script": "evolver/src/custom_evaluator.py:CustomEvaluator",
+    "evaluator_script": "evolver/src/evaluator/custom_evaluator.py:AccuracyMemoryEvaluator",
     "selection_mode": "pareto",
     "maximize_scores": {
         "accuracy": true,

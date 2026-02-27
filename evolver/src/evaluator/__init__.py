@@ -1,12 +1,17 @@
 """
-Evaluator Package
+Evaluator Package — Backward-Compatibility Shim + Cross-Domain Utilities
 
-Pluggable evaluation system for the evolution loop.
-Re-exports key classes for convenient imports.
+The evaluator abstractions now live in:
+  core.base_evaluator         → BaseEvaluator, EvalResult, SmokeTestResult
+  domains.ails_vrp.evaluator  → AILSEvaluator
+
+This file re-exports them for backward compatibility and also provides
+cross-domain utilities that remain here: FitnessAggregator, pareto_selection,
+MockMultiScoreEvaluator.
 """
 
-from .base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
-from .ails_evaluator import AILSEvaluator
+from core.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from domains.ails_vrp.evaluator import AILSEvaluator
 from .fitness_aggregator import FitnessAggregator
 from .pareto_selection import (
     compute_candidate_score_vector,

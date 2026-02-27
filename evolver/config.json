@@ -7,6 +7,18 @@
     "num_generations": 5,
     "num_seeds": 2,
     "reflection_frequency": 2,
+
+    "_comment_builder": "Set builder_script to use a custom builder (e.g. 'my_domain/builder.py:MyBuilder'). Leave null for default AILS builder.",
+    "builder_script": null,
+    "builder_config": {},
+
+    "_comment_evaluator": "Set evaluator_script to use a custom evaluator. Leave null for default AILS evaluator.",
+    "evaluator_script": null,
+    "evaluator_config": {},
+
+    "_comment_ails": "Path to the AILS folder (contains AILSII.jar, data/, warm_start/). Use absolute path or path relative to where you run evo_agent.py from.",
+    "source_code_root": "../AILS",
+
     "dataset_dir": "Vrp_Set_X",
     "target_instances": [
         "X-n266-k58",

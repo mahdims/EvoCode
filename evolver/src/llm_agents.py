@@ -51,13 +51,28 @@ except ImportError:
 class LLMAgents:
     """LLM-powered agents for evolutionary operators."""
 
-    def __init__(self, model: Optional[str] = None, use_llm: bool = True, provider = "gemini"):
+    def __init__(self,
+                 model: Optional[str] = None,
+                 use_llm: bool = True,
+                 provider="gemini",
+                 domain_context: Optional[Dict[str, Any]] = None):
         """
         Initialize LLM agents.
 
         Args:
-            model: Gemini model to use (defaults to gemini-2.0-flash-exp)
+            model: Model name (defaults to provider-specific default)
             use_llm: Whether to use LLM or template-based generation
+            provider: LLM provider ("gemini", "openai", "modelarts")
+            domain_context: Domain-specific context dict from the builder.
+                Keys used (all optional):
+                  "constraints"         – mandatory code rules
+                  "problem_description" – what problem is being solved
+                  "data_structures"     – available API / data structures
+                  "language"            – programming language
+                  "initial_seeds"       – list of (idea, code) tuples
+                  "mutation_guidance"   – domain-specific mutation hints
+                  "crossover_guidance"  – domain-specific crossover hints
+                If None or empty, falls back to built-in AILS VRP defaults.
         """
         self.use_llm = use_llm
         self.model_name = model
@@ -69,82 +84,28 @@ class LLMAgents:
         else:
             logger.debug("[LLM] Using template-based generation (no API calls)")
 
-        # Constraints that ALL generated code must follow
-        self.CONSTRAINTS = """
-=== MANDATORY AILS ADAPTER CONTRACT ===
-These requirements are NON-NEGOTIABLE. Violating any will cause runtime failure.
+        # Apply domain context; fall back to AILS defaults when not provided
+        from domains.ails_vrp.templates import (
+            AILS_CONSTRAINTS as _DEFAULT_CONSTRAINTS,
+            AILS_PROBLEM_DESCRIPTION as _DEFAULT_PROBLEM,
+            AILS_DATA_STRUCTURES as _DEFAULT_DATA,
+            get_ails_initial_seeds as _get_seeds,
+        )
 
-**PACKAGE & CLASS STRUCTURE:**
-1. Package MUST be: package EvoDestroy;
-2. Class MUST implement: DestroyStrategy interface
-3. Class MUST have default constructor (no-arg): public ClassName() {}
-
-**METHOD SIGNATURE (EXACT):**
-Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                           Node[] nodes, Instance instance, Random rand)
-
-**CRITICAL CONSTRAINTS:**
-1. RETURN SIZE: Array size MUST be <= numToRemove (AILS will fail if more)
-2. NODE VALIDATION: Only return nodes where:
-   - node.nodeBelong == true (node is currently in a route)
-   - node.name != 0 (never return depot)
-3. NO DUPLICATES: Each node in returned array must be unique
-4. USE PROVIDED RANDOM: Always use 'rand' parameter, NEVER create new Random()
-5. NO I/O: No file operations, no System.out, no network calls
-6. NO NEW DEPENDENCIES: Only use imports listed below
-7. SINGLE CLASS: One class per file, no inner classes
-8. DETERMINISTIC: Same seed must produce same selection
-
-**REQUIRED IMPORTS:**
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.HashSet;
-import java.util.Set;
-
-**AVAILABLE DATA (read-only):**
-- nodes[i]: Customer node (size = instance.getSize()-1, excludes depot)
-  - node.name: int ID (1 to N, 0 is depot - never select!)
-  - node.nodeBelong: boolean (true if currently assigned to route)
-  - node.demand: int customer demand
-  - node.knn[k]: k-th nearest neighbor node ID
-  - node.route: parent Route object
-  - node.next, node.prev: linked list pointers within route
-- routes[i]: Route object (i < numRoutes)
-  - route.first: depot Node (don't remove!)
-  - route.first.next: first customer in route
-  - route.totalDemand, route.fRoute (cost)
-- instance.dist(i, j): distance between node IDs i and j
-
-**SELECTION GUIDANCE:**
-- numToRemove is adaptive (omega) - typically 5-50 nodes
-- Prefer spatial clustering (nearby nodes) for better repair
-- Mix deterministic and random selection (~70%/30%) for diversity
-- Consider route structure when selecting
-
-**CRITICAL: NO DUPLICATES**
-You MUST ensure each node appears only ONCE in the returned array:
-```java
-// BAD - may contain duplicates
-List<Node> selected = new ArrayList<>();
-for (int i = 0; i < numToRemove; i++) {
-    selected.add(candidates.get(rand.nextInt(candidates.size())));  // WRONG!
-}
-
-// GOOD - guaranteed unique nodes
-List<Node> selected = new ArrayList<>();
-Set<Integer> usedIds = new HashSet<>();
-while (selected.size() < numToRemove && selected.size() < candidates.size()) {
-    Node node = candidates.get(rand.nextInt(candidates.size()));
-    if (usedIds.add(node.name)) {  // Returns false if already present
-        selected.add(node);
-    }
-}
-```
-"""
+        ctx = domain_context or {}
+        self.CONSTRAINTS = ctx.get("constraints", _DEFAULT_CONSTRAINTS)
+        self.PROBLEM_DESCRIPTION = ctx.get("problem_description", _DEFAULT_PROBLEM)
+        self.DATA_STRUCTURES = ctx.get("data_structures", _DEFAULT_DATA)
+        self.LANGUAGE = ctx.get("language", "java")
+        self._initial_seeds: Optional[list] = ctx.get("initial_seeds", _get_seeds())
+        self._mutation_guidance: str = ctx.get(
+            "mutation_guidance",
+            "Focus on node selection logic: KNN, cost-based, route-aware."
+        )
+        self._crossover_guidance: str = ctx.get(
+            "crossover_guidance",
+            "Preserve the spatial locality mechanism of the elite parent."
+        )
 
     def _initialize_client(self) -> None:
         """Internal helper to setup the specific provider"""
@@ -227,30 +188,27 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
         """
         Generate initial seed strategy.
 
+        Uses domain seeds from the injected domain_context when available,
+        otherwise falls back to built-in AILS VRP templates.
+
         Args:
             seed_id: Seed identifier (0, 1, 2, ...)
 
         Returns:
-            (idea, code) tuple with idea description and Java source code
+            (idea, code) tuple with idea description and source code
         """
-        # Template-based seeds with companion ideas
-        seed_ideas = [
-            "Randomly selects nodes from valid candidates, providing baseline diversity without spatial structure.",
-            "Removes nodes with highest cost contribution (distance to prev+next), targeting problematic nodes for reconstruction.",
-            "Uses KNN-based spatial clustering to select geographically coherent node groups, improving repair efficiency through locality."
-        ]
-
-        seeds = [
-            self._template_random_removal(),
-            self._template_worst_removal(),
-            self._template_clustered_removal()
-        ]
-
+        seeds = self._initial_seeds or []
         if seed_id < len(seeds):
-            return seed_ideas[seed_id], seeds[seed_id]
+            return seeds[seed_id]
+        elif seeds:
+            # Wrap around if seed_id exceeds available seeds
+            return seeds[seed_id % len(seeds)]
         else:
-            # Return random as fallback
-            return seed_ideas[0], self._template_random_removal()
+            # Absolute fallback (should not happen with proper domain_context)
+            from builder.ails_builder import get_ails_initial_seeds
+            fallback = get_ails_initial_seeds()
+            idx = seed_id % len(fallback)
+            return fallback[idx]
 
     def mutate(self,
                parent_code: str,
@@ -459,18 +417,18 @@ while (selected.size() < numToRemove && selected.size() < candidates.size()) {
                     logger.debug("[LLM ERROR] Failed to parse IDEA and CODE sections")
                     logger.debug("[LLM] Falling back to template generation")
                     fallback_idea = f"User-guided {insight_type} strategy: {idea[:50]}..."
-                    return fallback_idea, self._template_random_removal()
+                    return fallback_idea, self._fallback_seed_code()
                 logger.debug(f"[LLM USER_INSIGHT] Generated idea ({len(generated_idea)} chars) and code ({len(code)} chars)")
                 return generated_idea, code
             except Exception as e:
                 logger.debug(f"[LLM ERROR] User insight generation failed: {e}")
                 logger.debug("[LLM] Falling back to template generation")
                 fallback_idea = f"User-guided strategy (fallback): {idea[:50]}..."
-                return fallback_idea, self._template_random_removal()
+                return fallback_idea, self._fallback_seed_code()
         else:
             # Placeholder: return template with user idea as comment
             fallback_idea = f"Template-based strategy (LLM disabled). User idea: {idea}"
-            return fallback_idea, self._template_random_removal()
+            return fallback_idea, self._fallback_seed_code()
 
     def reflect_short_term(self,
                            better_code: str,
@@ -861,12 +819,12 @@ OUTPUT FORMAT:
     def _build_mutation_prompt(self, parent_code: str, reflection: str, strength: float) -> str:
         """Build mutation prompt."""
         return f"""
-You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
+You are evolving strategies for a {self.PROBLEM_DESCRIPTION} solver.
 
-TASK: Modify the destroy strategy to improve solution quality after 10,000 iterations.
+TASK: Modify the strategy to improve solution quality.
 
 CURRENT STRATEGY CODE:
-```java
+```{self.LANGUAGE}
 {parent_code}
 ```
 
@@ -882,26 +840,25 @@ MUTATION STRENGTH: {strength}
 
 MUTATION GUIDANCE:
 - Make minimal, targeted changes (this is mutation, not random generation)
-- Focus on improving the node selection logic
-- Consider using different route/node characteristics
+- {self._mutation_guidance}
 
-Return only the complete Java class code, no explanations, no markdown.
+Return only the complete {self.LANGUAGE} code, no explanations, no markdown.
 """
 
     def _build_crossover_prompt(self, parent1: str, parent2: str) -> str:
         """Build crossover prompt."""
         return f"""
-You are evolving destroy operators for a Vehicle Routing Problem (VRP) solver.
+You are evolving strategies for a {self.PROBLEM_DESCRIPTION} solver.
 
 TASK: Combine two parent strategies to create an offspring with characteristics from both.
 
 PARENT 1 CODE:
-```java
+```{self.LANGUAGE}
 {parent1}
 ```
 
 PARENT 2 CODE:
-```java
+```{self.LANGUAGE}
 {parent2}
 ```
 
@@ -910,9 +867,9 @@ PARENT 2 CODE:
 CROSSOVER GUIDANCE:
 - Combine the best aspects of both parents
 - Ensure the logic is coherent (not just random splicing)
-- The offspring should be a valid, working strategy
+- {self._crossover_guidance}
 
-Return only the complete Java class code, no explanations, no markdown.
+Return only the complete {self.LANGUAGE} code, no explanations, no markdown.
 """
 
     def _extract_idea_and_code(self, llm_response: str) -> tuple:
@@ -988,7 +945,15 @@ Return only the complete Java class code, no explanations, no markdown.
                 break
         return '\n'.join(lines)
 
-    # Template-based seed strategies
+    def _fallback_seed_code(self) -> str:
+        """Return first available seed code as fallback."""
+        seeds = self._initial_seeds or []
+        if seeds:
+            return seeds[0][1]
+        from builder.ails_builder import get_ails_initial_seeds
+        return get_ails_initial_seeds()[0][1]
+
+    # Template-based seed strategies (kept for backward compat; now delegates to _fallback_seed_code)
     def _template_random_removal(self) -> str:
         """Template: Random removal strategy."""
         return """package EvoDestroy;

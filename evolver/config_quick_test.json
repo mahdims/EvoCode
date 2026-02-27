@@ -1,0 +1,26 @@
+{
+    "experiment_name": "quick_test",
+    "population_size": 4,
+    "elite_ratio": 0.5,
+    "mutation_rate": 0.7,
+    "crossover_rate": 0.3,
+    "num_generations": 4,
+    "num_seeds": 1,
+    "reflection_frequency": 2,
+    "builder_script": null,
+    "builder_config": {},
+    "evaluator_script": null,
+    "evaluator_config": {},
+    "source_code_root": "../AILS",
+    "dataset_dir": "Vrp_Set_X",
+    "target_instances": [
+        "X-n101-k25"
+    ],
+    "use_vrpagent": true,
+    "code_length_penalty_alpha": 0.0,
+    "seed": 42,
+    "max_parallel_evals": 4,
+    "resume": false,
+    "verbose": 1,
+    "user_insight": "Try a string removal idea"
+}

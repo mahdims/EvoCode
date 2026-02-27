@@ -1,22 +1,28 @@
 """Quick test of evolution loop with minimal settings"""
+import json
 import sys
 from pathlib import Path
 from loguru import logger
 
 # Add src directory to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root / "src"))
+evolver_root = Path(__file__).parent.parent
+sys.path.insert(0, str(evolver_root / "src"))
+
+from dotenv import load_dotenv
+load_dotenv(evolver_root.parent / ".env")
 
 from evolution_loop import EvolutionLoop
 import shutil
 
+# Load config (provides source_code_root and other settings)
+config_path = evolver_root / "config.json"
+with open(config_path) as f:
+    config = json.load(f)
+
 # Clean up
-candidates_dir = project_root / "candidates"
+candidates_dir = evolver_root / "candidates"
 if candidates_dir.exists():
     shutil.rmtree(candidates_dir)
-temp_dir = project_root / "temp"
-if temp_dir.exists():
-    shutil.rmtree(temp_dir)
 
 logger.debug("="*80)
 logger.debug("QUICK EVOLUTION TEST - PARALLEL MULTI-INSTANCE EVALUATION")
@@ -31,7 +37,6 @@ evolution = EvolutionLoop(
     elite_ratio=0.25,                    # Keep 1 elite
     mutation_rate=0.7,
     crossover_rate=0.3,
-    dataset_dir="Vrp_Set_X",            # Use small test instances
     target_instances=[                   # Multiple instances for parallel eval
         "X-n101-k25",                    # 101 nodes, 25 vehicles
         "X-n106-k14",                    # 106 nodes, 14 vehicles
@@ -40,7 +45,8 @@ evolution = EvolutionLoop(
     ],
     use_vrpagent=True,
     code_length_penalty_alpha=0.00,
-    max_parallel_evals=4                 # Parallel evaluation on 4 cores
+    max_parallel_evals=4,                # Parallel evaluation on 4 cores
+    config=config
 )
 
 logger.debug(f"Target instances: {evolution.target_instances}")

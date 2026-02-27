@@ -10,7 +10,14 @@
       "Bash(python:*)",
       "Bash(tee:*)",
       "Bash(java:*)",
-      "Bash(conda info:*)"
+      "Bash(conda info:*)",
+      "Bash(/c/Users/mahdi/anaconda3/envs/env_evolve/python.exe:*)",
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/evolver/src/builder/__init__.py\":*)",
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/evolver/src/evaluator/__init__.py\":*)",
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/evolver/src/evaluator_stub.py\":*)",
+      "Bash(javac:*)",
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/setup.sh\":*)",
+      "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/run_evolution.sh\":*)"
     ]
   }
 }

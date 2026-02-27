@@ -24,13 +24,16 @@ from evaluator import (
     BaseEvaluator,
     EvalResult,
     SmokeTestResult,
-    AILSEvaluator,
     FitnessAggregator,
     compute_candidate_score_vector,
     pareto_select,
     pareto_tournament,
 )
 from evaluator_loader import create_evaluator
+from builder import BaseBuilder
+from builder_loader import create_builder
+from core.registry import DomainPluginRegistry
+import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
 
 @dataclass
@@ -64,7 +67,6 @@ class EvolutionLoop:
                  mutation_rate: float = 0.7,
                  crossover_rate: float = 0.3,
                  target_instances: List[str] = None,
-                 dataset_dir: str = "XL",
                  seed: int = 42,
                  use_vrpagent: bool = True,
                  code_length_penalty_alpha: float = 0.001,
@@ -74,6 +76,7 @@ class EvolutionLoop:
                  instance_workers: str | int = "auto",
                  max_parallel_evals: int = None,
                  evaluator: Optional[BaseEvaluator] = None,
+                 builder: Optional[BaseBuilder] = None,
                  multi_objective: Optional[MultiObjectiveConfig] = None,
                  config: Optional[Dict[str, Any]] = None):
         """
@@ -84,8 +87,8 @@ class EvolutionLoop:
             elite_ratio: Ratio of elites to preserve
             mutation_rate: Probability of mutation vs crossover
             crossover_rate: Probability of crossover (1 - mutation_rate)
-            target_instances: List of instance names for evaluation (without .vrp extension)
-            dataset_dir: Dataset directory name (e.g., "XL", "Vrp_Set_X")
+            target_instances: List of instance names for evaluation. If None, taken from
+                              the domain plugin (via evaluator.get_instances()).
             seed: Random seed
             use_vrpagent: Enable VRPAGENT techniques (biased crossover, typed mutations)
             code_length_penalty_alpha: VRPAGENT code length penalty coefficient
@@ -99,9 +102,11 @@ class EvolutionLoop:
             max_parallel_evals: Maximum total parallel workers. If set, intelligently divides budget:
                                instance_workers = min(num_instances, max_parallel_evals)
                                num_workers = max(1, max_parallel_evals // instance_workers)
-            evaluator: Optional pre-created BaseEvaluator instance. If None, created from config.
+            evaluator: Optional pre-created BaseEvaluator instance. If None, created via domain plugin.
+            builder: Optional pre-created BaseBuilder instance. If None, created via domain plugin.
             multi_objective: Multi-objective optimization config (selection mode, aggregation, etc.)
-            config: Full application config dict (used by evaluator_loader)
+            config: Full application config dict. Used to select and configure the domain plugin
+                    (config["domain"] defaults to "ails_vrp") and for evaluator_script / builder_script overrides.
         """
         mo = multi_objective or MultiObjectiveConfig()
 
@@ -111,7 +116,6 @@ class EvolutionLoop:
         self.crossover_rate = crossover_rate
         self.use_vrpagent = use_vrpagent
         self.code_length_penalty_alpha = code_length_penalty_alpha
-        self.dataset_dir = dataset_dir
         self.debug = debug
         self.user_insight = user_insight
         self.selection_mode = mo.selection_mode
@@ -120,22 +124,44 @@ class EvolutionLoop:
         # Compute paths relative to project root (parent of src/)
         project_root = Path(__file__).parent.parent
         self.candidates_dir = project_root / "candidates"
-        ails_jar = project_root / "AILS" / "AILSII.jar"
+
+        # Lazily create the domain plugin only when builder/evaluator are not injected.
+        # All domain-specific path resolution (AILS jar, data dirs, etc.) happens inside the plugin.
+        _plugin = None
+        def _get_plugin():
+            nonlocal _plugin
+            if _plugin is None:
+                domain = (config or {}).get("domain", "ails_vrp")
+                _plugin = DomainPluginRegistry.create(domain, config or {})
+            return _plugin
+
+        # --- Pluggable builder setup ---
+        if builder is not None:
+            self.builder = builder
+        elif (config or {}).get("builder_script"):
+            self.builder = create_builder(config)
+        else:
+            self.builder = _get_plugin().get_builder()
 
         self.candidate_manager = CandidateManager(
             candidates_dir=str(self.candidates_dir),
-            ails_jar=str(ails_jar),
+            builder=self.builder,
             cache_file=str(self.candidates_dir / "cache.json")
         )
 
-        # Set default instances based on dataset
-        if target_instances is None:
-            if dataset_dir == "Vrp_Set_X":
-                self.target_instances = ["X-n101-k25", "X-n106-k14"]
-            else:
-                self.target_instances = ["XL-n1048-k237"]
+        # --- Pluggable evaluator setup ---
+        if evaluator is not None:
+            self.evaluator = evaluator
+        elif (config or {}).get("evaluator_script"):
+            self.evaluator = create_evaluator(config)
         else:
+            self.evaluator = _get_plugin().get_evaluator()
+
+        # Target instances: explicit arg > evaluator's own list
+        if target_instances is not None:
             self.target_instances = target_instances
+        else:
+            self.target_instances = self.evaluator.get_instances()
 
         # Handle max_parallel_evals: controls TOTAL parallelization budget
         if max_parallel_evals is not None:
@@ -145,33 +171,6 @@ class EvolutionLoop:
         else:
             self.num_workers = num_workers
             self.instance_workers = instance_workers
-
-        # --- Pluggable evaluator setup ---
-        if evaluator is not None:
-            self.evaluator = evaluator
-        elif config and config.get("evaluator_script"):
-            self.evaluator = create_evaluator(
-                config,
-                ails_jar=str(ails_jar),
-                data_dir=str(project_root / "AILS" / "data" / dataset_dir),
-                warmstart_dir=str(project_root / "AILS" / "warm_start" / dataset_dir),
-                temp_dir=str(project_root / "temp"),
-                target_instances=self.target_instances,
-                max_workers=self._get_instance_workers_static(
-                    self.instance_workers, self.num_workers, len(self.target_instances)
-                ),
-            )
-        else:
-            self.evaluator = AILSEvaluator(
-                ails_jar=str(ails_jar),
-                data_dir=str(project_root / "AILS" / "data" / dataset_dir),
-                warmstart_dir=str(project_root / "AILS" / "warm_start" / dataset_dir),
-                temp_dir=str(project_root / "temp"),
-                target_instances=self.target_instances,
-                max_workers=self._get_instance_workers_static(
-                    self.instance_workers, self.num_workers, len(self.target_instances)
-                ),
-            )
 
         # Score names from evaluator
         self.score_names = self.evaluator.get_score_names()
@@ -183,7 +182,9 @@ class EvolutionLoop:
             primary_score=mo.primary_score,
         )
 
-        self.llm = LLMAgents(use_llm=True)
+        # Pass domain context from builder to LLM agents
+        llm_context = self.builder.get_llm_context() if self.builder else {}
+        self.llm = LLMAgents(use_llm=True, domain_context=llm_context)
 
         # Population tracking
         self.population: List[Dict[str, Any]] = []
@@ -289,10 +290,15 @@ class EvolutionLoop:
                     logger.debug(f"[RESUME] Skipping {candidate_dir.name}: no evaluation data")
                     continue
 
-                # Load the source code
-                strategy_class = metadata.get("strategy_class", "Unknown")
-                code_file = candidate_dir / "src" / "EvoDestroy" / f"{strategy_class}.java"
-                if not code_file.exists():
+                # Load the source code via builder (domain-agnostic)
+                code_file = None
+                if self.builder is not None:
+                    code_file = self.builder.get_source_path(candidate_dir, metadata)
+                if code_file is None:
+                    # Fallback: try legacy AILS path for backward compat
+                    strategy_class = metadata.get("strategy_class", "Unknown")
+                    code_file = candidate_dir / "src" / "EvoDestroy" / f"{strategy_class}.java"
+                if not code_file or not code_file.exists():
                     logger.debug(f"[RESUME] Skipping {candidate_dir.name}: source file not found")
                     continue
 
@@ -367,23 +373,23 @@ class EvolutionLoop:
         for i in range(num_seeds):
             idea, strategy_code = self.llm.generate_initial_seed(i)
 
-            # Compile
-            result = self.candidate_manager.compile_candidate(
-                strategy_code=strategy_code,
+            # Build (compile + package)
+            result = self.candidate_manager.build_candidate(
+                source_code=strategy_code,
                 candidate_id=self.candidate_counter,
-                idea=idea,  # NEW
-                generation=self.generation,  # NEW
+                idea=idea,
+                generation=self.generation,
                 mutation_type="initial_seed"
             )
 
             if not result:
-                logger.debug(f"[INIT] Seed {i} failed to compile, skipping")
+                logger.debug(f"[INIT] Seed {i} failed to build, skipping")
                 continue
 
             # Smoke test
             smoke = self.evaluator.smoke_test(
-                result["jar_path"],
-                result["wrapper_class"]
+                result["artifact_path"],
+                result["entry_point"]
             )
 
             if not smoke.success:
@@ -392,8 +398,8 @@ class EvolutionLoop:
 
             # Evaluate (via pluggable evaluator)
             eval_results_new = self.evaluator.evaluate(
-                result["jar_path"],
-                result["wrapper_class"]
+                result["artifact_path"],
+                result["entry_point"]
             )
             eval_results = self._eval_results_to_legacy(eval_results_new)
             score_vector = self._compute_score_vector(eval_results_new)
@@ -799,10 +805,10 @@ class EvolutionLoop:
                                        offspring_idea: str,
                                        parent_id: int,
                                        mutation_type: str) -> Optional[Dict[str, Any]]:
-        """Compile and evaluate offspring."""
-        # Compile
-        result = self.candidate_manager.compile_candidate(
-            strategy_code=offspring_code,
+        """Build and evaluate offspring."""
+        # Build (compile + package)
+        result = self.candidate_manager.build_candidate(
+            source_code=offspring_code,
             candidate_id=self.candidate_counter,
             idea=offspring_idea,
             generation=self.generation,
@@ -811,13 +817,13 @@ class EvolutionLoop:
         )
 
         if not result:
-            logger.debug(f"[OFFSPRING] Compilation failed")
+            logger.debug(f"[OFFSPRING] Build failed")
             return None
 
         # Smoke test
         smoke = self.evaluator.smoke_test(
-            result["jar_path"],
-            result["wrapper_class"]
+            result["artifact_path"],
+            result["entry_point"]
         )
 
         if not smoke.success:
@@ -826,8 +832,8 @@ class EvolutionLoop:
 
         # Evaluate (via pluggable evaluator)
         eval_results_new = self.evaluator.evaluate(
-            result["jar_path"],
-            result["wrapper_class"]
+            result["artifact_path"],
+            result["entry_point"]
         )
         eval_results = self._eval_results_to_legacy(eval_results_new)
         score_vector = self._compute_score_vector(eval_results_new)
@@ -1100,9 +1106,9 @@ class EvolutionLoop:
                         parent_id = elite_parent["candidate_id"]
                         mutation_type = mutation_type or "mutation"
 
-                    # === Stage 2: Compile ===
-                    compile_result = self.candidate_manager.compile_candidate(
-                        strategy_code=offspring_code,
+                    # === Stage 2: Build (compile + package) ===
+                    compile_result = self.candidate_manager.build_candidate(
+                        source_code=offspring_code,
                         candidate_id=candidate_id,
                         idea=offspring_idea,
                         generation=self.generation,
@@ -1111,15 +1117,15 @@ class EvolutionLoop:
                     )
 
                     if not compile_result:
-                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed to compile")
+                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed to build")
                         continue
 
-                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} compiled")
+                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} built")
 
                     # === Stage 3: Smoke Test ===
                     smoke_result = self.evaluator.smoke_test(
-                        compile_result["jar_path"],
-                        compile_result["wrapper_class"]
+                        compile_result["artifact_path"],
+                        compile_result["entry_point"]
                     )
 
                     if not smoke_result.success:
@@ -1130,8 +1136,8 @@ class EvolutionLoop:
 
                     # === Stage 4: Evaluate (via pluggable evaluator) ===
                     eval_results_new = self.evaluator.evaluate(
-                        compile_result["jar_path"],
-                        compile_result["wrapper_class"]
+                        compile_result["artifact_path"],
+                        compile_result["entry_point"]
                     )
                     eval_results = self._eval_results_to_legacy(eval_results_new)
                     score_vector = self._compute_score_vector(eval_results_new)

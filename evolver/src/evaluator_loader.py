@@ -2,7 +2,7 @@
 Evaluator Loader
 
 Dynamically loads evaluator implementations from user-provided scripts
-or creates the default AILSEvaluator.
+or delegates to the domain plugin registry for the default evaluator.
 """
 
 import importlib.util
@@ -13,7 +13,9 @@ from typing import Any, Dict, Tuple
 
 from loguru import logger
 
-from evaluator import BaseEvaluator, AILSEvaluator
+from evaluator import BaseEvaluator
+from core.registry import DomainPluginRegistry
+import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
 
 def _parse_evaluator_spec(spec: str) -> Tuple[str, str | None]:
@@ -151,10 +153,6 @@ def load_evaluator_from_script(evaluator_spec: str,
 
 
 def create_evaluator(config: Dict[str, Any],
-                     ails_jar: str = None,
-                     data_dir: str = None,
-                     warmstart_dir: str = None,
-                     temp_dir: str = None,
                      target_instances=None,
                      max_workers=None) -> BaseEvaluator:
     """Create an evaluator based on configuration.
@@ -164,20 +162,17 @@ def create_evaluator(config: Dict[str, Any],
         - "path/to/evaluator.py:ClassName"  (explicit class)
         - "path/to/evaluator.py"            (auto-detect)
 
-    Otherwise creates the default AILSEvaluator.
+    Otherwise delegates to the domain plugin registry
+    (config["domain"] defaults to "ails_vrp").
 
-    Common parameters (target_instances, max_workers, etc.) are automatically
+    Common parameters (target_instances, max_workers, config) are automatically
     passed to custom evaluators, so users don't need to duplicate them in
     evaluator_config.
 
     Args:
         config: Full application configuration dict
-        ails_jar: Path to AILS JAR (for default evaluator)
-        data_dir: Data directory (for default evaluator)
-        warmstart_dir: Warmstart directory (for default evaluator)
-        temp_dir: Temp directory (for default evaluator)
-        target_instances: List of instance names (passed to all evaluators)
-        max_workers: Max parallel workers (passed to all evaluators)
+        target_instances: List of instance names (passed to custom evaluators)
+        max_workers: Max parallel workers (passed to custom evaluators)
 
     Returns:
         A BaseEvaluator instance
@@ -190,19 +185,10 @@ def create_evaluator(config: Dict[str, Any],
         common_params = {
             "target_instances": target_instances or [],
             "max_workers": max_workers,
-            "ails_jar": ails_jar,
-            "data_dir": data_dir,
-            "warmstart_dir": warmstart_dir,
-            "temp_dir": temp_dir,
+            "config": config,
         }
         return load_evaluator_from_script(evaluator_spec, evaluator_config, common_params)
 
-    # Default: create AILSEvaluator
-    return AILSEvaluator(
-        ails_jar=ails_jar,
-        data_dir=data_dir,
-        warmstart_dir=warmstart_dir,
-        temp_dir=temp_dir,
-        target_instances=target_instances or [],
-        max_workers=max_workers,
-    )
+    # Default: delegate to domain plugin registry
+    domain = config.get("domain", "ails_vrp")
+    return DomainPluginRegistry.create(domain, config).get_evaluator()

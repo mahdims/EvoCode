@@ -5,7 +5,7 @@ from pathlib import Path
 from loguru import logger
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -23,7 +23,7 @@ try:
 
     logger.debug('Testing API call...')
     response = client.models.generate_content(
-        model='gemini-2.0-flash-exp',
+        model='gemini-2.5-flash',
         contents='Say hello in one word'
     )
     logger.debug(f'API response: {response.text}')

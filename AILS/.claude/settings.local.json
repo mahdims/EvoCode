@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version:*)",
+      "Bash(bash scripts/build_jar.sh:*)",
+      "Bash(java -jar AILSII.jar:*)",
+      "Bash(cmd //c \"scripts\\\\build_jar.bat\")",
+      "Bash(javac:*)",
+      "Bash(jar cfe:*)"
+    ]
+  }
+}
