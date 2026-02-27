@@ -51,7 +51,7 @@ except ImportError:
 class LLMAgents:
     """LLM-powered agents for evolutionary operators."""
 
-    def __init__(self, model: Optional[str] = None, use_llm: bool = True, provider = "gemini"):
+    def __init__(self, model: Optional[str] = None, use_llm: bool = True, provider = "modelarts"):
         """
         Initialize LLM agents.
 
