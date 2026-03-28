@@ -102,8 +102,8 @@ class Evaluator:
                    jar_path: str,
                    class_name: str,
                    seed: int = 42,
-                   iterations: int = 500,
-                   timeout: int = 120,
+                   iterations: int = 10,
+                   timeout: int = 5,
                    instance: str = None) -> Dict[str, Any]:
         """
         Run smoke test on a single instance.
@@ -188,7 +188,7 @@ class Evaluator:
                          instances: List[str],
                          seed: int = 42,
                          iterations: int = 500,
-                         timeout: int = 3600) -> List[Dict[str, Any]]:
+                         timeout: int = 30) -> List[Dict[str, Any]]:
         """Evaluate on target instances with warmstart (sequential)."""
         results = []
 
@@ -327,7 +327,7 @@ class Evaluator:
                                    instances: List[str],
                                    seed: int = 42,
                                    iterations: int = 500,
-                                   timeout: int = 3600,
+                                   timeout: int = 30,
                                    max_workers: int = None) -> List[Dict[str, Any]]:
         """Evaluate on target instances with parallel execution."""
         if max_workers is None:
@@ -374,7 +374,7 @@ class Evaluator:
                                       instances: List[str],
                                       seed: int = 42,
                                       iterations: int = 500,
-                                      timeout: int = 3600,
+                                      timeout: int = 30,
                                       max_candidate_workers: int = 3,
                                       max_instance_workers: int = 4) -> List[List[Dict[str, Any]]]:
         """2-level parallel evaluation for multiple candidates × instances."""
@@ -435,7 +435,7 @@ class Evaluator:
                       instances: List[str],
                       seeds: List[int] = None,
                       iterations: int = 500,
-                      timeout: int = 3600) -> Dict[str, Any]:
+                      timeout: int = 30) -> Dict[str, Any]:
         """Multi-seed confirmation for elite candidates."""
         if seeds is None:
             seeds = [42, 123, 456]

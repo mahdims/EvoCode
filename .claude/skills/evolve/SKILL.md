@@ -14,7 +14,7 @@ Ask the user to select or provide the following 4 parameters. **For each step, p
 
 ### 1. Evaluation Metric
 
-Invoke the `evolve/evaluation-metric` subskill to gather the evaluation metric(s).
+Invoke the `evolve-evaluation-metric` subskill to gather the evaluation metric(s).
 
 The subskill returns:
 - `metrics`: List of metric names

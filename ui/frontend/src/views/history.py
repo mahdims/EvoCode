@@ -33,7 +33,7 @@ def render_history_inspector(df_metrics, key_suffix):
                 "generation": st.column_config.NumberColumn("Gen", width="small"),
                 "global_best": st.column_config.NumberColumn("Best Fitness"),
                 "avg_fitness": st.column_config.NumberColumn("Avg Fitness"),
-                "viability_rate": st.column_config.NumberColumn("Viability"),
+                "viability_rate": st.column_config.NumberColumn("Completion"),
                 "diversity": st.column_config.NumberColumn("Diversity"),
             }
 

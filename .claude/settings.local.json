@@ -26,7 +26,16 @@
       "Bash(\"/c/Users/mahdi/.m2/wrapper/dists/apache-maven-3.9.6/bin/mvn\" package -DskipTests -q)",
       "Bash(\"C:/Users/mahdi/anaconda3/envs/env_evolve/python.exe\" evo_agent.py config_vm_scheduling.json --novisual)",
       "Bash(xargs grep:*)",
-      "Bash(python3 -u evo_agent.py --verbose)"
+      "Bash(python3 -u evo_agent.py --verbose)",
+      "Bash(find /e/Work/OptvEvolve/EvoCode -type f -name *.py -o -name *.json -o -name *.sql -o -name *.db)",
+      "Bash(find /e/Work/OptvEvolve/EvoCode/evolver -type f \\\\\\(-name *.py -o -name *.json -o -name *.db \\\\\\))",
+      "Bash(find /e/Work/OptvEvolve/EvoCode/evolver/src -type f -name *.py)",
+      "Bash(find /e/Work/OptvEvolve/EvoCode -type d -name *data* -o -type d -name *db*)",
+      "Bash(find /e/Work/OptvEvolve/EvoCode -type f -path */ui/* -name *.ts -o -path */ui/* -name *.tsx -o -path */ui/* -name *.py)",
+      "Bash(find /e/Work/OptvEvolve/EvoCode/evolver/candidates -name *.md -o -name metadata.json)",
+      "WebFetch(domain:docs.streamlit.io)",
+      "Bash(pip show:*)",
+      "Bash(find . -name \"*.py\" -type f -exec grep -l \"self.population\\\\s*=\" {})"
     ]
   }
 }

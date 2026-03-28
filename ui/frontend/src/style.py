@@ -18,19 +18,38 @@ class UIConfig:
     GRAPH_HEIGHT = 500
     TABLE_HEIGHT = 200
 
-    COLOR_BEST_FITNESS = "#82aaff"
-    COLOR_AVG_FITNESS = "#c792ea"
-    COLOR_DIVERSITY = "#addb67"
-    COLOR_VIABILITY = "#ef5350"
-    COLOR_SELECTED = "#FFD700"
+    COLOR_BEST_FITNESS = "#C96442"   # terracotta
+    COLOR_AVG_FITNESS = "#D4845E"    # warm salmon
+    COLOR_DIVERSITY = "#8B7D6B"      # warm umber
+    COLOR_VIABILITY = "#A0522D"      # sienna
+    COLOR_SELECTED = "#D4A853"       # warm amber
 
-    COLOR_HIGH_FITNESS = "#00FF00"
-    COLOR_MED_FITNESS = "#FFFF00"
-    COLOR_LOW_FITNESS = "#808080"
-    COLOR_SELECTED_NODE = "#FF0055"
-    COLOR_PATH_HIGHLIGHT = "#00FFFF"
+    COLOR_HIGH_FITNESS = "#C96442"   # terracotta
+    COLOR_MED_FITNESS = "#D4A853"    # amber
+    COLOR_LOW_FITNESS = "#8B8070"    # warm gray
+    COLOR_SELECTED_NODE = "#7B3F1A"  # dark sienna (outline/halo)
+    COLOR_PATH_HIGHLIGHT = "#D4845E" # warm salmon
 
     DEFAULT_POLL_RATE = 2
+
+    # Anthropic theme text colors
+    LIGHT_TEXT = "#2D2B27"
+    DARK_TEXT = "#E8E0D4"
+
+    @staticmethod
+    def plot_font_color(session_state) -> str:
+        """Auto-detect theme from Streamlit config."""
+        try:
+            import streamlit as _st
+            bg = _st.get_option("theme.backgroundColor") or ""
+            # Dark backgrounds have low luminance
+            if bg and bg.startswith("#") and len(bg) == 7:
+                r, g, b = int(bg[1:3], 16), int(bg[3:5], 16), int(bg[5:7], 16)
+                luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+                return UIConfig.DARK_TEXT if luminance < 0.5 else UIConfig.LIGHT_TEXT
+        except Exception:
+            pass
+        return UIConfig.LIGHT_TEXT
 
 
 class Colors:

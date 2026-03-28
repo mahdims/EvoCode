@@ -12,6 +12,7 @@ API key should be in .env file as GEMINI_API_KEY
 """
 
 import os
+import threading
 from typing import Optional, Dict, List, Any
 
 from loguru import logger
@@ -77,6 +78,9 @@ class LLMAgents:
         self.model_name = model
         self.client = None
         self.provider = provider.lower()
+
+        self._stats_lock = threading.Lock()
+        self._call_stats: Dict[str, Dict[str, int]] = {}
 
         if self.use_llm:
             self._initialize_client()
@@ -154,19 +158,41 @@ class LLMAgents:
             self.client = OpenAI(api_key=api_key, base_url=base_url)
             logger.debug(f"[LLM] Using OpenAI-compatible model: {self.model_name}")
 
-    def _generate_content(self, prompt):
+    def _generate_content(self, prompt, call_type: str = "unknown"):
         if self.provider in GEMINI_PROVIDERS:
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=prompt
             )
+            usage = getattr(response, 'usage_metadata', None)
+            in_tok  = getattr(usage, 'prompt_token_count', 0) or 0 if usage else 0
+            out_tok = getattr(usage, 'candidates_token_count', 0) or 0 if usage else 0
         else:
             assert self.provider in OPENAI_PROVIDERS
             response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=self._convert_prompt(prompt)
             )
+            usage = getattr(response, 'usage', None)
+            in_tok  = getattr(usage, 'prompt_tokens', 0) or 0 if usage else 0
+            out_tok = getattr(usage, 'completion_tokens', 0) or 0 if usage else 0
+
+        with self._stats_lock:
+            bucket = self._call_stats.setdefault(
+                call_type, {"calls": 0, "input_tokens": 0, "output_tokens": 0}
+            )
+            bucket["calls"] += 1
+            bucket["input_tokens"] += in_tok
+            bucket["output_tokens"] += out_tok
+
         return response
+
+    def get_and_reset_stats(self) -> Dict[str, Dict[str, int]]:
+        """Return accumulated LLM call stats and reset the counters."""
+        with self._stats_lock:
+            stats = {k: dict(v) for k, v in self._call_stats.items()}
+            self._call_stats.clear()
+        return stats
 
     def _get_response_text(self, response) -> str:
         if self.provider in GEMINI_PROVIDERS:
@@ -273,7 +299,7 @@ class LLMAgents:
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="mutation")
                 idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if idea is None or code is None:
                     logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
@@ -361,7 +387,7 @@ class LLMAgents:
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="crossover")
                 idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if idea is None or code is None:
                     logger.error("[LLM ERROR] Failed to parse IDEA and CODE sections")
@@ -423,7 +449,7 @@ class LLMAgents:
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="insight")
                 generated_idea, code = self._extract_idea_and_code(self._get_response_text(response))
                 if generated_idea is None or code is None:
                     logger.debug("[LLM ERROR] Failed to parse IDEA and CODE sections")
@@ -474,7 +500,7 @@ class LLMAgents:
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="reflection_short")
                 return self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Short-term reflection failed: {e}")
@@ -579,7 +605,7 @@ Consider combining the superior selection criteria with complementary diversific
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="reflection_long")
                 reflection = self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Long-term reflection failed: {e}")
@@ -636,7 +662,7 @@ Keep it concise and actionable.
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="reflection")
                 return self._get_response_text(response)
             except Exception as e:
                 logger.error(f"[LLM ERROR] Reflection failed: {e}")
@@ -684,7 +710,7 @@ REFLECTION:
 
         if self.use_llm:
             try:
-                response = self._generate_content(prompt)
+                response = self._generate_content(prompt, call_type="strategy_analysis")
                 if response and self._get_response_text(response):
                     return self._get_response_text(response).strip()
             except Exception as e:

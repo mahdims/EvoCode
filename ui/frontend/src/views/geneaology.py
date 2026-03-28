@@ -30,7 +30,7 @@ def render_genealogy_graph(snapshot, selected_node_id):
     with col_lbl:
         st.caption("Interactive Tree (Click node to inspect)")
     with col_btn:
-        if st.button("⟲ Reset View", help="Click if graph is off-center or zoomed out"):
+        if st.button("Reset View", help="Click if graph is off-center or zoomed out"):
             st.session_state.graph_view_seed += 1
             st.rerun()
 
@@ -44,18 +44,38 @@ def render_genealogy_graph(snapshot, selected_node_id):
     if not G.nodes():
         return None, None
 
-    best_node_id = max(G.nodes, key=lambda n: G.nodes[n].get('fitness', 0))
+    # Generation range filter
+    node_gens = [G.nodes[n].get('generation', 0) for n in G.nodes()]
+    gen_min_val = min(node_gens) if node_gens else 0
+    gen_max_val = max(node_gens) if node_gens else 0
+
+    if gen_min_val < gen_max_val:
+        gen_range = st.slider(
+            "Filter by generation range",
+            min_value=int(gen_min_val),
+            max_value=int(gen_max_val),
+            value=(int(gen_min_val), int(gen_max_val)),
+            key="genealogy_gen_filter"
+        )
+        visible_nodes = {
+            n for n in G.nodes()
+            if gen_range[0] <= G.nodes[n].get('generation', 0) <= gen_range[1]
+        }
+    else:
+        visible_nodes = set(G.nodes())
+
+    best_node_id = max(visible_nodes, key=lambda n: G.nodes[n].get('fitness', 0))
 
     active_node_id = best_node_id
     if selected_node_id is not None:
         try:
             sel_int = int(selected_node_id)
-            if sel_int in G.nodes():
+            if sel_int in visible_nodes:
                 active_node_id = sel_int
         except:
             pass
 
-    fitness_values = [data.get('fitness', 50) for _, data in G.nodes(data=True)]
+    fitness_values = [G.nodes[n].get('fitness', 50) for n in visible_nodes]
     min_fit = min(fitness_values) if fitness_values else 0
     max_fit = max(fitness_values) if fitness_values else 100
 
@@ -79,13 +99,18 @@ def render_genealogy_graph(snapshot, selected_node_id):
     viz_nodes = []
     viz_edges = []
 
-    for node_id in G.nodes():
+    for node_id in visible_nodes:
         fitness = G.nodes[node_id].get('fitness', 50)
         is_alive = G.nodes[node_id].get('alive', True)
         node_id_str = str(node_id)
 
         if node_id == active_node_id:
-            color = UIConfig.COLOR_SELECTED_NODE
+            base_color = get_node_color_by_fitness(fitness, min_fit, max_fit)
+            color = {
+                "background": base_color,
+                "border": UIConfig.COLOR_SELECTED_NODE,
+                "highlight": {"background": base_color, "border": UIConfig.COLOR_SELECTED_NODE}
+            }
             size = 35
         elif node_id in path_nodes:
             color = UIConfig.COLOR_PATH_HIGHLIGHT
@@ -106,6 +131,8 @@ def render_genealogy_graph(snapshot, selected_node_id):
         ))
 
     for u, v in G.edges():
+        if u not in visible_nodes or v not in visible_nodes:
+            continue
         edge_tuple = tuple(sorted((u, v)))
         if edge_tuple in path_edges:
             color = UIConfig.COLOR_PATH_HIGHLIGHT
@@ -149,7 +176,45 @@ def render_genealogy_graph(snapshot, selected_node_id):
 
     return_value = agraph(nodes=viz_nodes, edges=viz_edges, config=config)
 
+    st.markdown("""
+    <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;
+                padding:6px 0;font-size:0.78rem;color:#8B7D6B;">
+      <span style="font-weight:600;">Legend:</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#C96442;margin-right:4px;vertical-align:middle;"></span>High fitness</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#D4A853;margin-right:4px;vertical-align:middle;"></span>Mid fitness</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#8B8070;margin-right:4px;vertical-align:middle;"></span>Low fitness</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#444444;margin-right:4px;vertical-align:middle;"></span>Pruned</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#D4845E;margin-right:4px;vertical-align:middle;"></span>Ancestry path</span>
+      <span><span style="display:inline-block;width:11px;height:11px;border-radius:50%;
+            background:#C96442;border:2px solid #7B3F1A;margin-right:4px;vertical-align:middle;"></span>Selected</span>
+    </div>
+    """, unsafe_allow_html=True)
+
     return return_value, (G, active_node_id)
+
+def _get_descendant_stats(G, node_id):
+    """Compute children count and best descendant fitness via BFS."""
+    children = list(G.successors(node_id))
+    children_count = len(children)
+
+    best_desc_fitness = None
+    best_desc_id = None
+    queue = list(children)
+    while queue:
+        desc = queue.pop(0)
+        f = G.nodes[desc].get('fitness', 0)
+        if best_desc_fitness is None or f > best_desc_fitness:
+            best_desc_fitness = f
+            best_desc_id = desc
+        queue.extend(G.successors(desc))
+
+    return children_count, best_desc_fitness, best_desc_id
+
 
 def render_node_inspector(G, active_node_id, language = 'java'):
     if G is None or active_node_id is None or active_node_id not in G.nodes:
@@ -173,6 +238,18 @@ def render_node_inspector(G, active_node_id, language = 'java'):
             st.caption(f"Parent Node: {parents[0]}")
         else:
             st.caption("Parent Node: None (Root)")
+
+        # Descendant stats
+        children_count, best_desc_fitness, best_desc_id = _get_descendant_stats(G, active_node_id)
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            st.metric("Children", children_count)
+        with col_d2:
+            if best_desc_fitness is not None:
+                st.metric("Best Descendant", f"{best_desc_fitness:.5f}",
+                          help=f"Node {best_desc_id}")
+            else:
+                st.metric("Best Descendant", "—")
 
     # Code Container
     st.markdown("#### Code Snapshot")

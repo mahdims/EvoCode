@@ -139,6 +139,27 @@ class DashboardDAO:
             st.error(f"Error fetching global strategies: {e}")
             return pd.DataFrame()
 
+    def get_llm_stats(self, max_generation: int) -> "pd.DataFrame":
+        """Fetch LLM call and resource stats up to max_generation."""
+        conn = self._get_connection()
+        if not conn:
+            return pd.DataFrame()
+        try:
+            cursor = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='llm_stats'"
+            )
+            if not cursor.fetchone():
+                return pd.DataFrame()
+            df = pd.read_sql(
+                "SELECT * FROM llm_stats WHERE generation <= ? ORDER BY generation ASC",
+                conn,
+                params=(max_generation,)
+            )
+            conn.close()
+            return df
+        except Exception:
+            return pd.DataFrame()
+
     def get_latest_reflection(self, generation: int):
         """Fetch the most recent long-term reflection up to the given generation."""
         conn = self._get_connection()

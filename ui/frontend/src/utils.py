@@ -45,6 +45,9 @@ def initialize_session_state():
     if "sidebar_refresh_id" not in st.session_state:
         st.session_state.sidebar_refresh_id = 0
 
+    if "last_guidance_sent" not in st.session_state:
+        st.session_state.last_guidance_sent = None
+
 def get_current_generation(min_gen: int, max_gen: int) -> int:
     """
     Determine the current generation to display.

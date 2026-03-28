@@ -31,13 +31,14 @@ from evaluator import (
     SmokeTestResult,
     FitnessAggregator,
     compute_candidate_score_vector,
-    pareto_select,
     pareto_tournament,
 )
 from evaluator_loader import create_evaluator
 from builder import BaseBuilder
 from builder_loader import create_builder
 from core.registry import DomainPluginRegistry
+from embedding_service import EmbeddingService
+from survival import survival_select
 import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
 # TODO: Where do we want this to go? Parameter? Static internal path? Configuration file?
@@ -104,6 +105,20 @@ def init_db(clear: bool = False) -> None:
             )
         """)
 
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS llm_stats (
+                generation INTEGER PRIMARY KEY,
+                total_calls INTEGER,
+                input_tokens INTEGER,
+                output_tokens INTEGER,
+                call_breakdown TEXT,
+                wall_time_sec REAL,
+                process_cpu_pct REAL,
+                process_mem_mb REAL,
+                timestamp REAL
+            )
+        """)
+
         # Migration logic (safe to keep — all tables exist at this point)
         try:
             conn.execute("SELECT additional_metrics FROM metrics LIMIT 1")
@@ -117,6 +132,7 @@ def init_db(clear: bool = False) -> None:
             conn.execute("DELETE FROM snapshots")
             conn.execute("DELETE FROM reflections")
             conn.execute("DELETE FROM strategies")
+            conn.execute("DELETE FROM llm_stats")
 
     logger.debug("[DB INIT] Database initialized.")
 
@@ -217,6 +233,7 @@ class EvolutionLoop:
         self.use_vrpagent              = _r(use_vrpagent,               "use_vrpagent",               True)
         self.code_length_penalty_alpha = _r(code_length_penalty_alpha,  "code_length_penalty_alpha",  0.0)
         self.debug                     = _r(debug,                      "debug",                      True)
+        self.embedding_diversity_threshold = _conf.get("embedding_diversity_threshold", 0.90)
         self.resume                    = _conf.get("resume", False)
         _seed                          = _r(seed,                       "seed",                       42)
         _max_parallel = (max_parallel_evals
@@ -322,6 +339,11 @@ class EvolutionLoop:
         # Extra DB data
         self.history = {}
         self.strategy_registry: Dict = {}
+
+        # Code embedding service for diversity visualization
+        self.embedding_service = EmbeddingService(
+            cache_file=str(self.candidates_dir / "embedding_cache.json")
+        )
 
         if self.visualize:
             init_db(clear=not self.resume)
@@ -677,8 +699,14 @@ class EvolutionLoop:
             population_ideas = [c.get("idea") for c in self.population if c.get("idea") is not None]
 
             if self.diversity_checker.is_diverse(new_idea, population_ideas):
-                logger.debug(f"[DIVERSITY] Offspring is diverse (attempt {attempt+1})")
-                return offspring
+                # Second gate: check code-level similarity via embeddings
+                max_sim = self.embedding_service.get_similarity_to_population(offspring, self.population)
+                if max_sim < self.embedding_diversity_threshold:
+                    logger.debug(f"[DIVERSITY] Offspring is diverse (attempt {attempt+1}, emb_sim={max_sim:.3f})")
+                    return offspring
+                else:
+                    logger.debug(f"[DIVERSITY] Offspring too similar in embedding space "
+                                 f"(emb_sim={max_sim:.3f} >= {self.embedding_diversity_threshold}), retrying...")
             else:
                 similar = self.diversity_checker.find_most_similar(new_idea, population_ideas)
                 if similar:
@@ -1033,29 +1061,16 @@ class EvolutionLoop:
         self.short_term_reflections = []
 
     def survival_selection(self) -> None:
-        """
-        Select survivors for next generation.
-
-        Uses Pareto-based NSGA-II selection when selection_mode is "pareto"
-        and multiple scores are available. Otherwise uses elitist scalar selection.
-        """
-        if (self.selection_mode == "pareto"
-                and len(self.score_names) > 1
-                and any(c.get("score_vector") for c in self.population)):
-            self.population = pareto_select(
-                self.population,
-                self.population_size,
-                self.score_names,
-                self.maximize_scores,
-            )
-            # Sort by fitness for reporting
-            self.population.sort(key=lambda x: x["fitness"], reverse=True)
-        else:
-            # Sort by fitness (descending)
-            self.population.sort(key=lambda x: x["fitness"], reverse=True)
-            # Keep top population_size
-            self.population = self.population[:self.population_size]
-
+        """Select survivors for next generation via survival_select()."""
+        self.population = survival_select(
+            self.population,
+            self.population_size,
+            self.elite_size,
+            self.selection_mode,
+            self.score_names,
+            self.maximize_scores,
+            self.embedding_service,
+        )
         logger.debug(f"[SELECTION] Population after selection: {len(self.population)} candidates")
         if not self.population:
             logger.warning("[SELECTION] Population is empty — all candidates failed this generation")
@@ -1105,12 +1120,17 @@ class EvolutionLoop:
 
             # Generate offspring using work-stealing pipeline
             num_offspring = self.population_size - self.elite_size
+            _gen_start = time.time()
             offspring_list = self._evolve_generation_batch(num_offspring)
+            _gen_wall_time = time.time() - _gen_start
             for offspring in offspring_list:
                 self.population.append(offspring)
             offspring_count = len(offspring_list)
 
             logger.debug(f"[GEN {self.generation}] Generated {offspring_count} valid offspring")
+
+            # Capture full generation (elites + all offspring) before selection
+            all_candidates = list(self.population)
 
             # Survival selection
             self.survival_selection()
@@ -1124,7 +1144,7 @@ class EvolutionLoop:
 
             # Update DB
             if self.visualize:
-                self._log_generation_to_db(offspring_list, num_offspring)
+                self._log_generation_to_db(offspring_list, num_offspring, all_candidates, wall_time=_gen_wall_time)
 
             # Report iteration statistics (always shown)
             self._report_iteration_statistics()
@@ -1135,7 +1155,7 @@ class EvolutionLoop:
         # Save idea evolution log
         self.save_idea_evolution_log()
 
-    def _log_generation_to_db(self, offspring_list: list, num_attempted: int):
+    def _log_generation_to_db(self, offspring_list: list, num_attempted: int, all_candidates: list = None, wall_time: float = 0.0):
         """
         Centralized DB logging: Updates Global Strategy Table + Snapshots.
         """
@@ -1151,7 +1171,8 @@ class EvolutionLoop:
 
         global_best = best_candidate["fitness"]
         avg_fitness = np.mean(fitnesses)
-        diversity = np.var(fitnesses)
+        diversity_info = self.embedding_service.compute_population_diversity(self.population)
+        diversity = diversity_info["avg_diversity"] if diversity_info else np.var(fitnesses)
 
         # Geneaology tree
         for child in offspring_list:
@@ -1215,33 +1236,58 @@ class EvolutionLoop:
         # Reflections
         reflection_content = getattr(self, "long_term_reflection", "")
 
-        # Embeddings data
-        embeddings = []
-        for child in offspring_list:
-            fitness = child.get("fitness", 0.0)
-            score_dict = child.get("score_vector", {})
+        # Embeddings data — use all candidates evaluated this generation (elites + offspring),
+        # falling back to score-based pseudo-embeddings if API unavailable.
+        embedding_candidates = all_candidates if all_candidates is not None else self.population
+        embeddings = self.embedding_service.compute_2d_embeddings(embedding_candidates)
 
-            if not isinstance(score_dict, dict): score_dict = {}
+        if embeddings is None:
+            # Fallback: score_vector values as x/y for all evaluated candidates
+            import random as _random
+            embeddings = []
+            for idx, child in enumerate(embedding_candidates):
+                fitness = child.get("fitness", 0.0)
+                score_dict = child.get("score_vector", {})
+                if not isinstance(score_dict, dict): score_dict = {}
+                clean_values = []
+                for k in sorted(score_dict.keys()):
+                    val = score_dict[k]
+                    if val == float('inf') or val == -float('inf'): val = 0.0
+                    clean_values.append(val)
+                if len(clean_values) >= 2:
+                    x_val, y_val = clean_values[0], clean_values[1]
+                elif len(clean_values) == 1:
+                    # Single score: use fitness as x, add index-based jitter as y
+                    x_val = clean_values[0]
+                    y_val = idx * 0.01 + _random.uniform(-0.005, 0.005)
+                else:
+                    x_val = idx * 0.01
+                    y_val = _random.uniform(-0.005, 0.005)
+                embeddings.append({
+                    "x": x_val, "y": y_val,
+                    "Strategy Cluster": str(child.get("mutation_type", "Initial")),
+                    "Fitness": fitness
+                })
 
-            clean_values = []
-            for k in sorted(score_dict.keys()):
-                val = score_dict[k]
-                if val == float('inf') or val == -float('inf'): val = 0.0
-                clean_values.append(val)
-
-            if len(clean_values) >= 2:
-                x_val, y_val = clean_values[0], clean_values[1]
-            elif len(clean_values) == 1:
-                x_val, y_val = clean_values[0], clean_values[0]
-            else:
-                x_val, y_val = 0.0, 0.0
-
-            embeddings.append({
-                "x": x_val, "y": y_val,
-                "Strategy Cluster": str(child.get("mutation_type", "Initial")),
-                "Fitness": fitness
-            })
         embeddings_json = json.dumps(embeddings)
+
+        # Collect LLM call stats for this generation
+        llm_call_stats = self.llm.get_and_reset_stats() if hasattr(self, 'llm') else {}
+        total_calls   = sum(v["calls"]        for v in llm_call_stats.values())
+        input_tokens  = sum(v["input_tokens"] for v in llm_call_stats.values())
+        output_tokens = sum(v["output_tokens"] for v in llm_call_stats.values())
+        call_breakdown_json = json.dumps(llm_call_stats)
+
+        # Collect process resource snapshot
+        try:
+            import psutil as _psutil
+            _proc = _psutil.Process()
+            _proc.cpu_percent(interval=None)   # prime the counter
+            process_cpu_pct = _proc.cpu_percent(interval=0.05)
+            process_mem_mb  = _proc.memory_info().rss / 1e6
+        except Exception:
+            process_cpu_pct = 0.0
+            process_mem_mb  = 0.0
 
         # Put in DB now
         try:
@@ -1279,6 +1325,12 @@ class EvolutionLoop:
                 conn.execute(
                     "INSERT OR REPLACE INTO reflections VALUES (?, ?, ?)",
                     (self.generation, reflection_content, time.time())
+                )
+
+                conn.execute(
+                    "INSERT OR REPLACE INTO llm_stats VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (self.generation, total_calls, input_tokens, output_tokens,
+                     call_breakdown_json, wall_time, process_cpu_pct, process_mem_mb, time.time())
                 )
 
         except Exception as e:

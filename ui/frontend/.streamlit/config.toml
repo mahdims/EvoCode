@@ -7,16 +7,14 @@ gatherUsageStats = false
 [theme]
 font = "sans serif"
 
-[theme.dark]
-primaryColor = "#82aaff"
-backgroundColor = "#011627"
-secondaryBackgroundColor = "#0b253a"
-textColor = "#d6deeb"
-borderColor = "#5f7e97"
-
 [theme.light]
-primaryColor = "#275f92"
-backgroundColor = "#FBFBFB"
-secondaryBackgroundColor = "#F0F0F0"
-textColor = "#403f53"
-borderColor = "#d6deeb"
+primaryColor = "#C96442"
+backgroundColor = "#FAF7F2"
+secondaryBackgroundColor = "#F0EBE3"
+textColor = "#2D2B27"
+
+[theme.dark]
+primaryColor = "#D4845E"
+backgroundColor = "#1A1714"
+secondaryBackgroundColor = "#2A2622"
+textColor = "#E8E0D4"
