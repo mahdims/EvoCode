@@ -455,6 +455,9 @@ class EvolutionLoop:
 
         # Sort by fitness and keep top population_size
         candidates.sort(key=lambda x: x["fitness"], reverse=True)
+        # Populate history with ALL loaded candidates for genealogy tree
+        for c in candidates:
+            self.history[c['candidate_id']] = c
         self.population = candidates[:self.population_size]
         self.generation = max_gen
         self.candidate_counter = max_id + 1
@@ -1085,6 +1088,11 @@ class EvolutionLoop:
             # Apply survival selection if population exceeds limit
             if len(self.population) > self.population_size:
                 self.survival_selection()
+
+        # Seed history with initial population so generation-0 nodes are never lost
+        for ind in self.population:
+            if ind['candidate_id'] not in self.history:
+                self.history[ind['candidate_id']] = ind
 
         for gen in range(num_generations):
             self.generation = gen + 1

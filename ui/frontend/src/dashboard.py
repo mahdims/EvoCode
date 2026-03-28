@@ -217,6 +217,8 @@ def main():
     with dir_tab:
         st.header("Strategy Analysis")
 
+        strategy.render_expert_input()
+
         df_strategies = dao.get_global_strategies()
         strategy.render_strategies_table(df_strategies)
 

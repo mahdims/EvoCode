@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java:*)",
+      "Bash(curl:*)",
+      "Bash(chmod:*)",
+      "Bash(bash mvnw validate:*)",
+      "Bash(bash mvnw:*)",
+      "Bash(mvn compile:*)",
+      "Bash(cmd.exe /c \"mvn compile -q\")",
+      "Bash(python:*)",
+      "Bash(python data/generate_instance.py:*)",
+      "Bash(cmd.exe /c \"mvn test 2>&1\")",
+      "Bash(/c/Users/mahdi/.m2/wrapper/dists/apache-maven-3.9.6/bin/mvn test:*)",
+      "Bash(ls:*)",
+      "Read(//e/Work/VM_Scheduling/**)",
+      "Bash(./mvnw test:*)",
+      "Bash(./gradlew test:*)",
+      "Bash(mvn clean test:*)",
+      "Bash(cmd.exe /c \"mvn clean test -Dtest=UnbalancedInstanceTest\")",
+      "Bash(./mvnw clean test:*)",
+      "Bash(LOG_LEVEL=INFO ./mvnw test:*)",
+      "Bash(LOG_LEVEL=WARN ./mvnw test:*)",
+      "Bash(mvn test-compile:*)",
+      "Bash(./mvnw.cmd test-compile:*)",
+      "Bash(./mvnw test-compile:*)",
+      "Bash(./mvnw compile:*)"
+    ]
+  }
+}

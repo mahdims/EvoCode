@@ -1,2 +1,5 @@
 # Prevent instantiated environment files from being uploaded
 .env
+.applications
+*.log
+__pycache__/

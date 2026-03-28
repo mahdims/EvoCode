@@ -1,0 +1,126 @@
+// =============================================================================
+// Server Consolidation V2 — Instance Data Schema
+// Reverse-engineered from client-provided protobuf data snippets
+// =============================================================================
+
+syntax = "proto3";
+
+package consolidation;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Top-Level Request Message
+// ─────────────────────────────────────────────────────────────────────────────
+
+message ConsolidationRequest {
+  repeated Vm                              vms                                    = 1;
+  repeated AntiAffinityGroup               anti_affinity_groups                   = 2;
+  repeated Objective                        objective                             = 3;
+  ObjectiveParameter                       objective_parameter                    = 4;
+  SubhealthyHostMigrationParameter         subhealthy_host_migration_parameter    = 5;
+  TenantDispersedDistributionParameter     tenant_dispersed_distribution_parameter = 6;
+  // NOTE: Host-level data (host_id, numa_count, cpu_capacity, mem_capacity)
+  // was NOT present in the provided snippets. The client likely provides this
+  // in a separate section or message. Marked as TODO.
+  // repeated Host hosts = 7;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VM Definition
+// ─────────────────────────────────────────────────────────────────────────────
+
+message Vm {
+  string   vm_id            = 1;   // UUID, e.g. "05b87da1-463a-4cf6-9236-d70dd2f19332"
+  string   in_host_id       = 2;   // Current host, e.g. "cnnorth4a-pod33-c6s-cna000096"
+  string   in_numa_id       = 3;   // Current NUMA node index as string, e.g. "0" or "1"
+  double   numa_cpu         = 4;   // CPU allocated on the NUMA node (vCPUs), e.g. 4.0, 12.0
+  double   numa_mem         = 5;   // Memory allocated on the NUMA node (MB), e.g. 8192.0, 65536.0
+  repeated string resource_types = 6;  // Resource type tags, e.g. ["IOoptimizedS6_NV601", "IOoptimizedS6_NV602"]
+  int64    lifetime         = 7;   // VM lifetime in seconds(?), e.g. 41640138
+  bool     can_migration    = 8;   // Whether the VM is eligible for migration
+  string   tenant_id        = 9;   // Tenant identifier, e.g. "e3e5b8fa650a4f53a61508c8547ec0c9"
+  string   cutting_line_tag = 10;  // Resource cutting line tag, e.g. "s6", "c6s"
+  VmMetrics metrics         = 11;  // Runtime metrics
+  string   flavor_id        = 12;  // VM flavor, e.g. "s6.xlarge.2", "c6s.xlarge.2"
+}
+
+message VmMetrics {
+  double    cpu_util       = 1;   // CPU utilization percentage, e.g. 81.09
+  QosMetric cpu_qos        = 2;   // CPU QoS metric
+  QosMetric cpu_power_qos  = 3;   // CPU power QoS metric
+}
+
+message QosMetric {
+  double         score          = 1;  // QoS score, e.g. 100.0
+  PressureStats  pressure_stats = 2;  // Pressure distribution statistics
+}
+
+message PressureStats {
+  double left          = 1;  // Left bound / lower percentile, e.g. 69.84
+  double right         = 2;  // Right bound / upper percentile, e.g. 78.09
+  double p95           = 3;  // 95th percentile, e.g. 81.09
+  double typical_value = 4;  // Typical (median/mean?) value, e.g. 81.09
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Anti-Affinity Groups
+// ─────────────────────────────────────────────────────────────────────────────
+
+message AntiAffinityGroup {
+  repeated string vm_ids_in_group = 1;  // 2+ VM IDs that must not share the same host
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Objectives
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum Objective {
+  OBJECTIVE_UNSPECIFIED   = 0;
+  MAX_EMPTY_HOST          = 1;
+  MAX_PREFERRED_FLAVOR    = 2;
+  MIN_LOAD_IMBALANCE      = 3;
+  // Others TBD based on full proto definition
+}
+
+message ObjectiveParameter {
+  MaxPreferFlavorParameter max_prefer_flavor_parameter = 1;
+}
+
+message MaxPreferFlavorParameter {
+  PreferFlavor prefer_flavor = 1;
+}
+
+message PreferFlavor {
+  double   numa_cpu        = 1;   // e.g. 96.0
+  double   numa_mem        = 2;   // e.g. 65536.0
+  double   cpu_ratio       = 3;   // e.g. 1.0
+  int32    numa_num        = 4;   // e.g. 1
+  repeated string resource_types = 5;  // e.g. ["IOoptimizedC6S"]
+  string   flavor_id       = 6;   // e.g. "c6s.8xlarge.2"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Subhealthy Host Migration
+// ─────────────────────────────────────────────────────────────────────────────
+
+message SubhealthyHostMigrationParameter {
+  repeated TenantSubhealthyHostMigrationParameter tenant_subhealthy_host_migration_parameters = 1;
+}
+
+message TenantSubhealthyHostMigrationParameter {
+  string          tenant_id = 1;   // e.g. "chinatower-INF-HQ"
+  repeated string vm_id     = 2;   // VMs that need to be migrated off subhealthy hosts
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tenant Dispersed Distribution
+// ─────────────────────────────────────────────────────────────────────────────
+
+message TenantDispersedDistributionParameter {
+  repeated TenantDistributionParameter tenant_distribution_parameters = 1;
+}
+
+message TenantDistributionParameter {
+  string          tenant_id            = 1;   // e.g. "chinatower-INF-HQ"
+  repeated string vm_id                = 2;   // VMs subject to dispersal
+  int32           max_vm_num_per_group = 3;   // Max VMs from this tenant per host, e.g. 6
+}

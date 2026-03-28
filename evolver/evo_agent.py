@@ -119,12 +119,18 @@ def print_config(config: dict):
     logger.debug("EVOLUTION CONFIGURATION")
     logger.debug("="*80)
     logger.debug(f"  Experiment: {config.get('experiment_name', 'unnamed')}")
-    logger.debug(f"  Dataset: {config['dataset_dir']}")
-    logger.debug(f"  Instances: {config['target_instances']}")
+    if config.get('dataset_dir'):
+        logger.debug(f"  Dataset: {config['dataset_dir']}")
+    if config.get('source_code_root'):
+        logger.debug(f"  Source root: {config['source_code_root']}")
+    if config.get('target_instances'):
+        logger.debug(f"  Instances: {config['target_instances']}")
     logger.debug(f"  Population: {config['population_size']} (elite ratio: {config['elite_ratio']})")
     logger.debug(f"  Generations: {config['num_generations']} (seeds: {config['num_seeds']})")
     logger.debug(f"  Mutation/Crossover: {config['mutation_rate']:.0%}/{config['crossover_rate']:.0%}")
-    logger.debug(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config['code_length_penalty_alpha']})")
+    if config.get('use_vrpagent') is not None:
+        logger.debug(f"  VRPAGENT: {config['use_vrpagent']} (penalty α={config.get('code_length_penalty_alpha', 0.0)})")
+    logger.debug(f"  Domain: {config.get('domain', 'ails_vrp')}")
     logger.debug(f"  Random seed: {config['seed']}")
     logger.debug(f"  Resume: {config.get('resume', False)}")
     logger.debug(f"  Debug output: {config.get('debug', True)}")

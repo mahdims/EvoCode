@@ -1,5 +1,35 @@
 import streamlit as st
 
+
+def render_expert_input():
+    """Render an expert guidance box for directing the EvoAgent."""
+    with st.container(border=True):
+        st.subheader("Expert Guidance")
+        st.caption(
+            "Review the tested strategies below, then optionally provide direction "
+            "to influence what the EvoAgent explores next."
+        )
+        expert_text = st.text_area(
+            "Your guidance for the next evolution cycle:",
+            placeholder="e.g. Focus on route-aware destroy operators that remove clusters of nearby nodes...",
+            height=100,
+            key="expert_guidance_input",
+        )
+        col_left, col_right = st.columns([0.8, 0.2])
+        with col_right:
+            send_clicked = st.button(
+                "Send to EvoAgent",
+                use_container_width=True,
+                type="primary",
+                key="send_expert_guidance",
+            )
+        if send_clicked:
+            if expert_text.strip():
+                st.success("Guidance sent to EvoAgent.")
+            else:
+                st.warning("Please enter some guidance first.")
+
+
 def render_strategies_table(df_strat):
     if df_strat.empty:
         st.info("No strategy data available yet.")

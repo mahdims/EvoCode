@@ -1,0 +1,28 @@
+{
+    "experiment_name": "vm_scheduling_test",
+    "population_size": 4,
+    "elite_ratio": 0.25,
+    "mutation_rate": 0.7,
+    "crossover_rate": 0.3,
+    "num_generations": 5,
+    "num_seeds": 1,
+    "reflection_frequency": 2,
+    "_comment_domain": "Set domain to select the problem domain plugin.",
+    "domain": "vm_scheduling",
+    "_comment_source": "Path to applications/VM_Scheduling (relative to EvoCode repo root).",
+    "source_code_root": "../applications/VM_Scheduling",
+    "_comment_instances": "Instance names (without .json) from applications/VM_Scheduling/data/",
+    "smoke_test_instance": "smoke_h8_v5_s1",
+    "target_instances": [
+        "tenant_h10_v8_s1",
+        "tenant_h15_v10_s1",
+        "tenant_h20_v12_s1"
+    ],
+    "timeout": 60,
+    "seed": 42,
+    "max_parallel_evals": 3,
+    "resume": false,
+    "verbose": 1,
+    "user_insight": "",
+    "code_length_penalty_alpha": 0.0
+}

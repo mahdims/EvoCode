@@ -38,7 +38,7 @@ Ask for one of the following options:
 
 Offer these choices, allow multiple selections:
 - `Neighborhood Search Improvement`
-- `Ruin-and-Recreate`
+- `Ruin and Recreate`
 - `Capacity Constraint Speedup`
 - `Metaheuristic Tuning`
 - `Other` (User provides custom direction)
@@ -46,6 +46,7 @@ Offer these choices, allow multiple selections:
 ### 4. Component
 
 Ask the user to identify the function, class, or specific line range.
+Alwasy come up with some options for the user. Always provide a recomended one (base on what you think has most impact)
 
 ## Step 2: Get "Evolution Loop" Parameters
 
@@ -74,7 +75,17 @@ The subskill will incorporate these into the config JSON.
 
 3. Ask for a final "Confirm" before proceeding. Offer options: `Accept` or `Update` (user provides changes).
 
-4. Once confirmed, run:
+4. In a seperate proces run the UI and give the address to the use so they can view it. 
+To Start the UI (Streamlit dashboard)
+
+cd ui/frontend
+streamlit run src/dashboard.py --server.address=localhost
+
+This opens at http://localhost:8501. It reads from a shared SQLite database that the evolution process writes to.
+
+Let the use know that it will fills up as the Evolution is continues 
+
+5. Once confirmed, run:
    ```bash
    python3 -u evolver/evo_agent.py --verbose <JSON file from Step 2, if not default>
    ```

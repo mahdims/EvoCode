@@ -14,13 +14,12 @@
     "evaluator_script": null,
     "evaluator_config": {},
     "_comment_ails": "Path to the AILS folder (contains AILSII.jar, data/, warm_start/). Use absolute path or path relative to where you run evo_agent.py from.",
-    "source_code_root": "../AILS",
+    "source_code_root": "../applications/AILS",
     "dataset_dir": "Vrp_Set_X",
-    "smoke_test_instance": "X-n280-k17",
+    "smoke_test_instance": "X-n101-k25",
     "target_instances": [
         "X-n101-k25",
-        "X-n275-k28",
-        "X-n284-k15"
+        "X-n275-k28"
     ],
     "use_vrpagent": true,
     "code_length_penalty_alpha": 0.0,

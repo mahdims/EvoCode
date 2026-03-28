@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender with detailed pattern -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appender for detailed debugging -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>alns-solver.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set default level to INFO, can be overridden by environment variable -->
+    <root level="${LOG_LEVEL:-INFO}">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="FILE" />
+    </root>
+
+    <!-- Detailed logging for solver components -->
+    <logger name="com.vmscheduling.solver" level="DEBUG" />
+    <logger name="com.vmscheduling.operator" level="DEBUG" />
+    <logger name="com.vmscheduling.objective" level="DEBUG" />
+    <logger name="com.vmscheduling.constraint" level="DEBUG" />
+</configuration>

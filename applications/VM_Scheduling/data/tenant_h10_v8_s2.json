@@ -1,0 +1,4469 @@
+{
+  "vms": [
+    {
+      "vm_id": "d5e34124-5c6e-4337-95ba-2bdd177219d3",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 12347009,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 55.23,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "9b575bd1-3653-48dd-9b1f-282e4067c358",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 3398097,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 16.879,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b91751da-cdbd-47d3-a4be-8049a372db8f",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 35162938,
+      "can_migration": false,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 45.813,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "09325626-e6b5-4de7-84ab-6cce80877b6f",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 2841793,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 74.888,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "8697bbd0-e252-4e33-a44c-50556c71c4a6",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 12038631,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 22.709,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "22fe99a2-2c70-401e-933c-91352d3d854e",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 35236707,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 79.901,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e4c11ab2-fec3-46b3-ae8d-4b8a8f54f8ce",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 30906233,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 60.08,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "5ca495fa-5a91-489b-97ee-ab64ca2ce6bc",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 30915048,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.55,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "87c56473-a7a8-4ee0-b61e-bfd2bd143fa9",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 17770623,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 74.362,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "5a9ac6de-cbd4-43e2-94de-c9ef83f0be4e",
+      "in_host_id": "host-0000",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 45404968,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 72.478,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "eb9ac688-b9d3-4cca-9155-1e8259cc60b1",
+      "in_host_id": "host-0000",
+      "in_numa_id": "1",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 38418751,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 41.496,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b3172062-d08f-4bb2-931d-6460f0caeef0",
+      "in_host_id": "host-0000",
+      "in_numa_id": "1",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 12144747,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 51.226,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "cc9c3adc-f515-4823-8da4-daeb4f3f8777",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 48392669,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 47.164,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "681b8f58-9683-4b76-9da5-9b74a6c3181c",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 21927518,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 41.668,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e1cf4f58-9f8e-4ce0-af29-d115ef24bd62",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 6058355,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 30.609,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "ff3fe32a-30ff-44ee-90a7-bd04e85bfcdd",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 8124070,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 53.968,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e020307a-aeb6-4b2c-ba03-8a709779ac1f",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 8131389,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 15.237,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "f18e8598-35e1-4291-9322-a7353ead4efe",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 5052356,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 58.772,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "2c006497-5c37-4746-9cc3-6c270e8a35b1",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 17743775,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 11.218,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "eb2b5693-babb-4fbb-8a76-c196067cfdcb",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 2419008,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 14.584,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b105d83e-85e9-4186-af09-81aebc1b00d9",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 1129939,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 8.237,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "0112ff0f-0948-4cca-b887-7acf26c377c1",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 24098938,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 52.082,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "7d1f7157-5653-445c-8939-0aa51cf5192b",
+      "in_host_id": "host-0001",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 3067681,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 46.363,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "4391b6e2-e6ea-4b0f-8bb7-be72bd6d2500",
+      "in_host_id": "host-0001",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 27967964,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 57.901,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "a92c0e6f-17ec-4406-b9bc-2ccdf572df00",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 47130328,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 12.654,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "20a63ac1-f2b6-4df6-9ff0-7870c9d531ae",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 35781591,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 34.471,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "f5b0f16c-dfdb-4394-a4d2-01e653f53d68",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 23887547,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 50.456,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "8ed5d1b7-b310-4730-849d-d332a73fa0b2",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 10433451,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 23.973,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "74115c86-188b-4044-abb3-b36f29421c40",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 43619208,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 73.73,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3f2bb31e-fe99-44ad-8809-eae3ef232a32",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 16601055,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 10.516,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "caa538a0-9fc9-470d-ba6b-86a7975b54a3",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 42869856,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 24.246,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "013c3273-c02c-4b95-86b4-625b475b5109",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 11141186,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 35.654,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3da95cd2-167b-45df-b948-f82a8317cba0",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 7839147,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 18.632,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "854efa60-0641-44fa-b7a4-7ce41aeffafc",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 45928692,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 28.229,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e8147dc9-af47-4f29-b663-1b3e6147db98",
+      "in_host_id": "host-0002",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 15102291,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 37.53,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "0d1db848-9762-4f40-94c1-6aad0575665b",
+      "in_host_id": "host-0002",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 29052604,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 48.601,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "5dbe3b83-7ad4-4a77-8d7a-cfcba9cd8311",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 2307474,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 74.109,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "fbc80976-b0bd-44fe-8a21-f7035dd1d183",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 25979711,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 70.576,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "32c9c69b-4e50-4d89-9ae2-5cc819e5bea1",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 46135526,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 65.905,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "769d7068-7c61-438c-a325-c0ae6921f4be",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 14975212,
+      "can_migration": false,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 51.017,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "4e4a4f6a-5f76-4331-862e-2b1048cbc656",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49557625,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.624,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "644bc1f2-5f96-4801-9251-47db1da2fee7",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49044891,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.519,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "1f2c5349-4110-4768-9f29-a9d5e33fc312",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 9251607,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 68.755,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b151ad75-3646-4793-b5ac-d6d1641f6abd",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 8073346,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 54.437,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "4a6ec74a-7f79-4eaf-b4af-8aa6b9387e62",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 24997097,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 15.61,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "dda4a33d-86bb-479d-bbf4-a20644d96a45",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 33048478,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 59.594,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "ae2321e6-d604-4617-bdfb-ad9cee9b14f6",
+      "in_host_id": "host-0003",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 20915472,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 16.73,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b2140e47-6d7a-48b8-8c6e-800b4268636f",
+      "in_host_id": "host-0003",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 46576328,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 11.323,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "12378865-1890-40c9-9364-6be0d15ed4a4",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 24894596,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 45.895,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "160de247-cc6f-4e06-911c-62e0e5f0bff6",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 46724943,
+      "can_migration": false,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 53.606,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3b50aaf2-63fd-48f2-8bdf-b98ff95278b4",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 48540131,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 56.082,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "1cb0a312-4978-4137-8624-857a2c2af60d",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 11470200,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 76.245,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3fa4502f-8439-4eee-942f-18a9189d9439",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49007320,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 17.717,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3c04b8c7-b406-45fc-b287-e1e576003a09",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 28122945,
+      "can_migration": false,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 31.891,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "70f162c0-7776-4a45-a50f-5218ba9acb51",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49242447,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 49.637,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "0db6eaa3-829a-4993-a492-3e422e304ca0",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 33377230,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 24.029,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "a5dea412-b494-4aea-a982-5e3fefc9998b",
+      "in_host_id": "host-0004",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 32708883,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 46.068,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "14d78322-a892-4986-a976-c587bee07a21",
+      "in_host_id": "host-0004",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49706891,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 51.594,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "fa2c02f2-61ef-4a6a-aabe-ab54d0f866ac",
+      "in_host_id": "host-0004",
+      "in_numa_id": "1",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 43602776,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 28.47,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "775fef72-e21a-447b-a81e-5b84b629e04d",
+      "in_host_id": "host-0004",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 44626468,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 12.082,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "91bb840c-babe-40f3-b76e-539af1777e34",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 41697764,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 21.162,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "c45a2918-8ec6-44d9-90cc-8d5263d60044",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 14390771,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 74.104,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "9ca72c90-cddf-4b30-bd63-c5693105c746",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 10252509,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 55.902,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "2c6ee00e-90eb-43d0-8370-e22040f1e697",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 32345669,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 77.929,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "7c44b0af-e7da-47d1-80c7-0d2659a92c2a",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 36780178,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 54.38,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "ec188c45-acbf-48de-acc8-85f57c28fd54",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 23474130,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 70.814,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "9d0d4608-146e-45e8-bcb1-ba29070c100f",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 24329473,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.269,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "c99481d4-a008-477d-accc-5a7d415adfd1",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49289094,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 17.193,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "4b793ffa-acf9-439d-b6f3-bdb0fe0717e9",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 11458789,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 46.807,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "d99bd235-89ba-4461-88b5-5aae5dd04d49",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 26657675,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 20.331,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "22257954-a629-43cd-bf8f-24414ef54c3d",
+      "in_host_id": "host-0005",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 33466364,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 58.333,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "5025ee4c-d309-40de-820b-27f213a3878d",
+      "in_host_id": "host-0005",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 21412456,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 76.13,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "84a1330a-6499-44f0-a48c-9985a745d743",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 7237688,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 20.796,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "264824b0-d9d7-4665-9920-9e1d87cc9e7e",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 34867853,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 28.106,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "3b6b8864-8fb1-4c7e-b521-3971f317c4ad",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 36073264,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 76.832,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "61142cc4-c992-4ba6-9190-d7b3ace58b3a",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 25468118,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 31.706,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "7f61a499-2a9f-4f23-9cd9-ed6b7516de6e",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 30662719,
+      "can_migration": false,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 39.58,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "fda04453-7126-4e70-b7ee-ae1aebf7502d",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 43924186,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 25.478,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "78092ff9-3ce3-4493-a341-7131197c6566",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 13720230,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 68.466,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "22a85496-cb8b-44c3-a3e7-10f75b293bba",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 16647913,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 46.295,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "bfd9cb15-d2d2-4606-8ef9-68ea6677726e",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 23968226,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 59.005,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "bb6beb33-b0a2-4efb-94b3-146280aaced9",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 22507502,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.326,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "f832c256-c0e7-4ffd-a1d4-342cef8192ef",
+      "in_host_id": "host-0006",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49074424,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 51.686,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "652a5f19-4eff-4787-9e10-2c20129a70f3",
+      "in_host_id": "host-0006",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 33480681,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 76.828,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e4c0ae1b-1673-478d-ba04-afd870d3fdda",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 13512453,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 33.426,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "5bf2e125-2ac6-4f77-99cc-b7e51ab165a1",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 6169865,
+      "can_migration": false,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 71.24,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "52053d31-8aed-4f05-8225-95796fb9bd2c",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 16889348,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 49.598,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e6944862-a347-413d-b809-aab248df0a5a",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 11105158,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 20.16,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "c8ac5639-2467-475e-b880-d97d1854e551",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 14713402,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 15.603,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "300102b3-57ba-4696-96d1-f9fd400b8cb0",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 17541086,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 59.603,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "a5e1a56d-5f6f-4a13-b0aa-23af56221de3",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 42033798,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 15.803,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "459c06ab-c75f-4a83-b18f-e4da6e05e3ec",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 9911617,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 48.259,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "b5e94ec9-c4a7-4a9a-a5f0-52355689e724",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 41961644,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 22.082,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "7d6639fb-794a-45d3-843e-432c646df485",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 42572981,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 45.847,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "82ab6185-9687-44f2-972e-1ee498f81f80",
+      "in_host_id": "host-0007",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 37143921,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 42.178,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "2b5dfde4-745f-4b3c-b109-5a28d73e1a3d",
+      "in_host_id": "host-0007",
+      "in_numa_id": "1",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 28634744,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 38.948,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "20d26793-9762-4397-bec9-3480738a72c6",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 8949219,
+      "can_migration": false,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 55.98,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "752b5ccd-4e49-4629-a482-9a5513cc5332",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 48468127,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 12.947,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "2598a19d-0662-49ca-ac52-c98138788e48",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 29675945,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 11.894,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e612893e-dbb4-491a-8cbd-817c772644e7",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 32866426,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 41.11,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "808d7c6d-b21c-4602-a37d-7cf207c68737",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 37383374,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 19.971,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "566c1496-85db-4908-9072-0223d271c6b8",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 46757891,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 22.886,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "8a4637fc-21bb-411d-8062-d1247dfa74ee",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 8819557,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 39.978,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "610ec605-a05a-41b3-b718-761e9db48e04",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 23598306,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 69.395,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "eabfaf0b-c7ec-40f0-81d0-7fba864576e9",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 46326854,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 12.908,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "2c689230-35d7-4c5a-b509-6383a08bb559",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 26320186,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 30.548,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "504dfe80-65ed-4a6f-a162-00fb6d7fb1fe",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 21085378,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 47.185,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "c3ee458a-8702-43a9-88d2-523445ba266d",
+      "in_host_id": "host-0008",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 33810936,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 22.183,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "a881bbac-8c0a-44ef-b2f5-54ec233aac1a",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 7978141,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 46.379,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "946ca71f-6437-457c-b1c0-8386365beca3",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 3624189,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 51.907,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "79a37667-b8c9-4e65-b3e0-73d94333e7da",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 37217290,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 62.917,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "50024fef-991c-4f1f-a4fb-c413d5e1bcb0",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 3561500,
+      "can_migration": true,
+      "tenant_id": "ht-0000",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 79.786,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "eabea608-8b56-4730-b1a1-7983a2c64f75",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 13514226,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 11.921,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "a12c085b-76c0-4fdf-9e40-52e0e636d179",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 20582022,
+      "can_migration": false,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 16.816,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "d98c791a-46ff-41b1-91eb-c497b370814d",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 35788487,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 35.952,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "7492728a-08a0-4862-b870-178caaf2cf35",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 20959365,
+      "can_migration": true,
+      "tenant_id": "ht-0001",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 14.153,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "e91577e4-f1bc-4a0e-85b1-92febbf8f9e1",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 2056842,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 29.992,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "86845422-97f1-4632-a474-79f0ba5730a7",
+      "in_host_id": "host-0009",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 14499424,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 14.656,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "df16ffa3-729a-4676-9fdd-2e7ec946cec7",
+      "in_host_id": "host-0009",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 31501964,
+      "can_migration": false,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 33.714,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    },
+    {
+      "vm_id": "94b05be9-30db-4af5-9d7a-f542412c1543",
+      "in_host_id": "host-0009",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 32950904,
+      "can_migration": true,
+      "tenant_id": "ht-0002",
+      "cutting_line_tag": "c6",
+      "tenant_level": 6,
+      "metrics": {
+        "cpu_util": 61.648,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 0,
+            "p95": 0,
+            "typical_value": 0
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.xlarge.1"
+    }
+  ],
+  "anti_affinity_groups": [],
+  "objectives": [
+    "MAX_PREFERRED_FLAVOR"
+  ],
+  "objective_parameter": {},
+  "subhealthy_host_migration_parameter": {
+    "tenant_subhealthy_host_migration_parameters": []
+  },
+  "tenant_dispersed_distribution_parameter": {
+    "tenant_distribution_parameters": []
+  },
+  "soft_constraint_config": {
+    "n1": 2,
+    "n2": 3,
+    "n3": 12
+  },
+  "_meta": {
+    "n1": 2,
+    "n2": 3,
+    "n3": 12,
+    "initial_violation_A": 10,
+    "initial_violation_B": 30,
+    "initial_violation_C": 0,
+    "seed": 2
+  }
+}

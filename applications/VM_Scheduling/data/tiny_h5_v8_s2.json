@@ -1,0 +1,1332 @@
+{
+  "vms": [
+    {
+      "vm_id": "5186ee32-ee8d-4ee9-b703-48a05d300cb9",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 26502369,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 84.56581,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 75.32412,
+            "right": 83.412797,
+            "p95": 84.56581,
+            "typical_value": 84.56581
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.2xlarge.1"
+    },
+    {
+      "vm_id": "8f54f8ce-acaa-439e-8384-4b40ffa9b9f1",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "IOoptimizedC6S"
+      ],
+      "lifetime": 13203310,
+      "can_migration": false,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "c6s",
+      "metrics": {
+        "cpu_util": 45.10739,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 28.63367,
+            "right": 40.565,
+            "p95": 45.10739,
+            "typical_value": 45.10739
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6s.xlarge.4"
+    },
+    {
+      "vm_id": "761ebfd2-bd14-4fa9-b714-210c665d7435",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 44950331,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 49.10125,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 25.22036,
+            "right": 44.943628,
+            "p95": 49.10125,
+            "typical_value": 49.10125
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.4xlarge.1"
+    },
+    {
+      "vm_id": "7c9260dc-74e0-48a9-b949-2f258ebdbfe3",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 45217044,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 34.22005,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 17.06578,
+            "right": 29.680348,
+            "p95": 34.22005,
+            "typical_value": 34.22005
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.2xlarge.4"
+    },
+    {
+      "vm_id": "a6c3181c-81e2-40df-848b-1df78feb994a",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 42326189,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 33.06599,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 19.8298,
+            "right": 28.395218,
+            "p95": 33.06599,
+            "typical_value": 33.06599
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.2xlarge.4"
+    },
+    {
+      "vm_id": "a7251af0-930c-4bd3-8f0a-d2a81b2d19a2",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 4282303,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 25.39549,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 6.20046,
+            "right": 22.783677,
+            "p95": 25.39549,
+            "typical_value": 25.39549
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.large.1"
+    },
+    {
+      "vm_id": "5cc36c27-0e8a-45b1-8828-d569c268a20e",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "IOoptimizedC6S"
+      ],
+      "lifetime": 25173853,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6s",
+      "metrics": {
+        "cpu_util": 65.54889,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 49.75972,
+            "right": 65.422166,
+            "p95": 65.54889,
+            "typical_value": 65.54889
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6s.large.2"
+    },
+    {
+      "vm_id": "85e95186-2f09-41ae-bc1b-00d92838e766",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 47405472,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 58.05124,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 38.6606,
+            "right": 53.197154,
+            "p95": 58.05124,
+            "typical_value": 58.05124
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.2xlarge.1"
+    },
+    {
+      "vm_id": "c4169b14-8d2f-427e-b2da-f0a54ef25c07",
+      "in_host_id": "cneast3a-pod34-c6-cna000000",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 41611326,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 86.18181,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 61.22242,
+            "right": 82.655084,
+            "p95": 86.18181,
+            "typical_value": 86.18181
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.2xlarge.2"
+    },
+    {
+      "vm_id": "95bfa813-84ae-45e9-a0a6-3ac1f2b64df6",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "1",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 27370599,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 34.51647,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 12.98931,
+            "right": 33.207283,
+            "p95": 34.51647,
+            "typical_value": 34.51647
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.large.2"
+    },
+    {
+      "vm_id": "3b4dbf2c-a294-423d-b411-5c86188b1044",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "IOoptimizedC6S_NV602",
+        "IOoptimizedC6S_NV602"
+      ],
+      "lifetime": 35108696,
+      "can_migration": false,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6s",
+      "metrics": {
+        "cpu_util": 68.72842,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 60.78979,
+            "right": 65.159083,
+            "p95": 68.72842,
+            "typical_value": 68.72842
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6s.large.2"
+    },
+    {
+      "vm_id": "5c1dc12f-b5a1-4e51-9fb8-883accda6559",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "1",
+      "numa_cpu": 96.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 18220757,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 30.08634,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 12.31502,
+            "right": 28.162576,
+            "p95": 30.08634,
+            "typical_value": 30.08634
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.8xlarge.1"
+    },
+    {
+      "vm_id": "854efa60-0641-44fa-b7a4-7ce41aeffafc",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "IOoptimizedS6_NV602",
+        "IOoptimizedS6_NV602"
+      ],
+      "lifetime": 45928692,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 32.87535,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 16.12447,
+            "right": 28.342537,
+            "p95": 32.87535,
+            "typical_value": 32.87535
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.xlarge.1"
+    },
+    {
+      "vm_id": "866aa110-edcb-4f9a-ab03-1f3de1a5dbb0",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "1",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 40013134,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 13.44081,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 10.844762,
+            "p95": 13.44081,
+            "typical_value": 13.44081
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.large.4"
+    },
+    {
+      "vm_id": "d73253cf-32c9-469b-8e50-ed891ae25cc8",
+      "in_host_id": "cnnorth4b-pod33-c6s-cna000001",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6_NV604",
+        "ComputeC6_NV601"
+      ],
+      "lifetime": 46135526,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 78.08544,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 65.81263,
+            "right": 75.768741,
+            "p95": 78.08544,
+            "typical_value": 78.08544
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.2xlarge.2"
+    },
+    {
+      "vm_id": "644bc1f2-5f96-4801-9251-47db1da2fee7",
+      "in_host_id": "cneast3a-pod35-s6-cna000002",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6_NV604",
+        "ComputeC6_NV602"
+      ],
+      "lifetime": 49044891,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 72.82225,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 60.67932,
+            "right": 72.2134,
+            "p95": 72.82225,
+            "typical_value": 72.82225
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.2xlarge.4"
+    },
+    {
+      "vm_id": "b4af8aa6-b938-4e62-8b0d-dfd1c6f75c81",
+      "in_host_id": "cneast3a-pod35-s6-cna000002",
+      "in_numa_id": "1",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "MemOptimizedM6_NV605",
+        "MemOptimizedM6_NV604"
+      ],
+      "lifetime": 34416826,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 91.36396,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 80.49284,
+            "right": 88.942952,
+            "p95": 91.36396,
+            "typical_value": 91.36396
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.xlarge.4"
+    },
+    {
+      "vm_id": "b2140e47-6d7a-48b8-8c6e-800b4268636f",
+      "in_host_id": "cneast3a-pod35-s6-cna000002",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "MemOptimizedM6_NV604",
+        "MemOptimizedM6_NV605"
+      ],
+      "lifetime": 46576328,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 12.58798,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 0,
+            "right": 12.232181,
+            "p95": 12.58798,
+            "typical_value": 12.58798
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.2xlarge.2"
+    },
+    {
+      "vm_id": "a5e8b517-cf4f-4eb8-bd17-50fdae6d43f2",
+      "in_host_id": "cneast3a-pod35-s6-cna000002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 3521401,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 31.67443,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 16.49161,
+            "right": 28.268935,
+            "p95": 31.67443,
+            "typical_value": 31.67443
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.large.1"
+    },
+    {
+      "vm_id": "6c784059-c17a-4f18-b807-214ef32f2f10",
+      "in_host_id": "cneast3a-pod35-s6-cna000002",
+      "in_numa_id": "0",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 7452816,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 27.37409,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 12.96594,
+            "right": 26.586534,
+            "p95": 27.37409,
+            "typical_value": 27.37409
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.large.1"
+    },
+    {
+      "vm_id": "64923e42-2e30-4ca0-bc9b-dc7fe1becaea",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "0",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "MemOptimizedM6_NV605",
+        "MemOptimizedM6_NV604"
+      ],
+      "lifetime": 35237030,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 29.65551,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 13.53721,
+            "right": 27.594782,
+            "p95": 29.65551,
+            "typical_value": 29.65551
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.4xlarge.4"
+    },
+    {
+      "vm_id": "d1d68ccd-c2f8-4c94-94d7-8322a8927986",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49706891,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 60.91241,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 43.20183,
+            "right": 56.02624,
+            "p95": 60.91241,
+            "typical_value": 60.91241
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.2xlarge.4"
+    },
+    {
+      "vm_id": "2d680ac5-a66b-490e-b75f-ef72e21ac47b",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "0",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 7337082,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 89.89066,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 67.88427,
+            "right": 85.364045,
+            "p95": 89.89066,
+            "typical_value": 89.89066
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.4xlarge.4"
+    },
+    {
+      "vm_id": "cddf5b30-7d63-4569-b105-c74694897966",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "IOoptimizedC6S"
+      ],
+      "lifetime": 42065650,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "c6s",
+      "metrics": {
+        "cpu_util": 60.10913,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 46.05625,
+            "right": 57.278657,
+            "p95": 60.10913,
+            "typical_value": 60.10913
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6s.2xlarge.4"
+    },
+    {
+      "vm_id": "a88d09b0-ab49-4ab2-9652-2e9e887d94b8",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 5391918,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 48.65004,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 30.1791,
+            "right": 47.315314,
+            "p95": 48.65004,
+            "typical_value": 48.65004
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.2xlarge.1"
+    },
+    {
+      "vm_id": "f042b30d-c010-4257-8276-bae22c779451",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "1",
+      "numa_cpu": 4.0,
+      "numa_mem": 8192.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 28144928,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 61.26188,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 36.56469,
+            "right": 60.991483,
+            "p95": 61.26188,
+            "typical_value": 61.26188
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.large.4"
+    },
+    {
+      "vm_id": "08b55aae-5dd0-4d49-8077-450cf787a919",
+      "in_host_id": "cneast3a-pod33-c6s-cna000003",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "MemOptimizedM6_NV605",
+        "MemOptimizedM6_NV604"
+      ],
+      "lifetime": 37104529,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 55.78756,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 40.95716,
+            "right": 53.29617,
+            "p95": 55.78756,
+            "typical_value": 55.78756
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.2xlarge.1"
+    },
+    {
+      "vm_id": "4fea8e6f-cbbc-4c1a-b2ca-74e1a5747574",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "IOoptimizedS6"
+      ],
+      "lifetime": 44849565,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 51.62762,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 27.73558,
+            "right": 50.574558,
+            "p95": 51.62762,
+            "typical_value": 51.62762
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.2xlarge.2"
+    },
+    {
+      "vm_id": "0faf60b1-4709-4b9b-85cb-3c083b6b8864",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "0",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "IOoptimizedS6_NV604",
+        "IOoptimizedS6_NV605"
+      ],
+      "lifetime": 8510346,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 78.67547,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 64.34122,
+            "right": 77.083512,
+            "p95": 78.67547,
+            "typical_value": 78.67547
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.2xlarge.1"
+    },
+    {
+      "vm_id": "e502bfe2-7608-4198-8abf-aba1de915e5b",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 16.0,
+      "numa_mem": 32768.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 9983147,
+      "can_migration": false,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 44.77968,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 20.88895,
+            "right": 43.148547,
+            "p95": 44.77968,
+            "typical_value": 44.77968
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.2xlarge.1"
+    },
+    {
+      "vm_id": "cb8b84c3-23e7-40f7-9b29-3bba2f721386",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "0",
+      "numa_cpu": 8.0,
+      "numa_mem": 16384.0,
+      "resource_types": [
+        "MemOptimizedM6"
+      ],
+      "lifetime": 10085266,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "m6",
+      "metrics": {
+        "cpu_util": 77.76827,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 59.27207,
+            "right": 73.650674,
+            "p95": 77.76827,
+            "typical_value": 77.76827
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "m6.xlarge.4"
+    },
+    {
+      "vm_id": "f832c256-c0e7-4ffd-a1d4-342cef8192ef",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "ComputeC6"
+      ],
+      "lifetime": 49074424,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 61.02376,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 42.28955,
+            "right": 59.047871,
+            "p95": 61.02376,
+            "typical_value": 61.02376
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.4xlarge.4"
+    },
+    {
+      "vm_id": "f7ce3072-2086-4972-a107-1125f5ee6fa8",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "ComputeC6_NV602",
+        "ComputeC6_NV603"
+      ],
+      "lifetime": 2881029,
+      "can_migration": true,
+      "tenant_id": "ai_inference_pool",
+      "cutting_line_tag": "c6",
+      "metrics": {
+        "cpu_util": 20.03771,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 5.09812,
+            "right": 16.376054,
+            "p95": 20.03771,
+            "typical_value": 20.03771
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6.4xlarge.2"
+    },
+    {
+      "vm_id": "a347413d-7809-4ab2-88df-0a5a8a88a85e",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 96.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "IOoptimizedS6_NV605",
+        "IOoptimizedS6_NV604"
+      ],
+      "lifetime": 11105158,
+      "can_migration": true,
+      "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+      "cutting_line_tag": "s6",
+      "metrics": {
+        "cpu_util": 23.19164,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 1.00771,
+            "right": 19.272242,
+            "p95": 23.19164,
+            "typical_value": 23.19164
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "s6.8xlarge.2"
+    },
+    {
+      "vm_id": "ba609a8a-3d76-4f7a-b514-0d943f19679b",
+      "in_host_id": "cnnorth4a-pod34-m6-cna000004",
+      "in_numa_id": "1",
+      "numa_cpu": 32.0,
+      "numa_mem": 65536.0,
+      "resource_types": [
+        "IOoptimizedC6S_NV603",
+        "IOoptimizedC6S_NV602"
+      ],
+      "lifetime": 41976991,
+      "can_migration": true,
+      "tenant_id": "177219d30e7a469f995bafc8f2a4d27b",
+      "cutting_line_tag": "c6s",
+      "metrics": {
+        "cpu_util": 89.60865,
+        "cpu_qos": {
+          "score": 100.0,
+          "pressure_stats": {
+            "left": 68.77452,
+            "right": 85.297165,
+            "p95": 89.60865,
+            "typical_value": 89.60865
+          }
+        },
+        "cpu_power_qos": {
+          "score": 0.0,
+          "pressure_stats": {
+            "left": 0.0,
+            "right": 0.0,
+            "p95": 0.0,
+            "typical_value": 0.0
+          }
+        }
+      },
+      "flavor_id": "c6s.4xlarge.2"
+    }
+  ],
+  "anti_affinity_groups": [
+    {
+      "vm_ids_in_group": [
+        "5186ee32-ee8d-4ee9-b703-48a05d300cb9",
+        "f7ce3072-2086-4972-a107-1125f5ee6fa8",
+        "0faf60b1-4709-4b9b-85cb-3c083b6b8864"
+      ]
+    }
+  ],
+  "objectives": [
+    "MAX_PREFERRED_FLAVOR"
+  ],
+  "objective_parameter": {
+    "max_prefer_flavor_parameter": {
+      "prefer_flavor": {
+        "numa_cpu": 96.0,
+        "numa_mem": 65536.0,
+        "cpu_ratio": 1.0,
+        "numa_num": 1,
+        "resource_types": [
+          "IOoptimizedC6S"
+        ],
+        "flavor_id": "c6s.8xlarge.2"
+      }
+    }
+  },
+  "subhealthy_host_migration_parameter": {
+    "tenant_subhealthy_host_migration_parameters": [
+      {
+        "tenant_id": "ai_inference_pool",
+        "vm_ids": [
+          "a5e8b517-cf4f-4eb8-bd17-50fdae6d43f2"
+        ]
+      }
+    ]
+  },
+  "tenant_dispersed_distribution_parameter": {
+    "tenant_distribution_parameters": [
+      {
+        "tenant_id": "2b491044d5e341249c6e433715ba2bdd",
+        "vm_ids": [
+          "5186ee32-ee8d-4ee9-b703-48a05d300cb9",
+          "a7251af0-930c-4bd3-8f0a-d2a81b2d19a2",
+          "85e95186-2f09-41ae-bc1b-00d92838e766",
+          "95bfa813-84ae-45e9-a0a6-3ac1f2b64df6",
+          "d1d68ccd-c2f8-4c94-94d7-8322a8927986",
+          "2d680ac5-a66b-490e-b75f-ef72e21ac47b",
+          "f042b30d-c010-4257-8276-bae22c779451",
+          "4fea8e6f-cbbc-4c1a-b2ca-74e1a5747574",
+          "0faf60b1-4709-4b9b-85cb-3c083b6b8864",
+          "a347413d-7809-4ab2-88df-0a5a8a88a85e"
+        ],
+        "max_vm_num_per_group": 6
+      }
+    ]
+  }
+}

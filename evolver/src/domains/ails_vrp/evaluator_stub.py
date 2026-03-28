@@ -187,7 +187,7 @@ class Evaluator:
                          class_name: str,
                          instances: List[str],
                          seed: int = 42,
-                         iterations: int = 10000,
+                         iterations: int = 500,
                          timeout: int = 3600) -> List[Dict[str, Any]]:
         """Evaluate on target instances with warmstart (sequential)."""
         results = []
@@ -326,7 +326,7 @@ class Evaluator:
                                    class_name: str,
                                    instances: List[str],
                                    seed: int = 42,
-                                   iterations: int = 10000,
+                                   iterations: int = 500,
                                    timeout: int = 3600,
                                    max_workers: int = None) -> List[Dict[str, Any]]:
         """Evaluate on target instances with parallel execution."""
@@ -373,7 +373,7 @@ class Evaluator:
                                       candidates: List[Dict[str, Any]],
                                       instances: List[str],
                                       seed: int = 42,
-                                      iterations: int = 10000,
+                                      iterations: int = 500,
                                       timeout: int = 3600,
                                       max_candidate_workers: int = 3,
                                       max_instance_workers: int = 4) -> List[List[Dict[str, Any]]]:
@@ -434,7 +434,7 @@ class Evaluator:
                       class_name: str,
                       instances: List[str],
                       seeds: List[int] = None,
-                      iterations: int = 10000,
+                      iterations: int = 500,
                       timeout: int = 3600) -> Dict[str, Any]:
         """Multi-seed confirmation for elite candidates."""
         if seeds is None:

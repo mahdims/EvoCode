@@ -18,7 +18,15 @@
       "Bash(javac:*)",
       "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/setup.sh\":*)",
       "Bash(\"/e/Work/OptvEvolve/EvoCode/scripts/run_evolution.sh\":*)",
-      "Bash(source .venv/Scripts/activate)"
+      "Bash(source .venv/Scripts/activate)",
+      "Bash(grep -l \"tenant_level\" \"/e/Work/OptvEvolve/EvoCode/applications/VM_Scheduling/data/\"*.json)",
+      "Bash(mvn package -DskipTests -q)",
+      "Bash(\"/c/Users/mahdi/.m2/wrapper/dists/apache-maven-3.9.6/bin/mvn\" package -DskipTests)",
+      "Bash(VM_JAR=\"e:/Work/OptvEvolve/EvoCode/applications/VM_Scheduling/target/vm-scheduling-1.0-SNAPSHOT.jar\")",
+      "Bash(\"/c/Users/mahdi/.m2/wrapper/dists/apache-maven-3.9.6/bin/mvn\" package -DskipTests -q)",
+      "Bash(\"C:/Users/mahdi/anaconda3/envs/env_evolve/python.exe\" evo_agent.py config_vm_scheduling.json --novisual)",
+      "Bash(xargs grep:*)",
+      "Bash(python3 -u evo_agent.py --verbose)"
     ]
   }
 }

@@ -1,0 +1,22 @@
+#!/bin/sh
+# Maven Wrapper script
+# Downloads Maven if not present, then runs it
+
+set -e
+
+MAVEN_HOME="${HOME}/.m2/wrapper/dists/apache-maven-3.9.6"
+MAVEN_CMD="${MAVEN_HOME}/bin/mvn"
+
+if [ ! -f "${MAVEN_CMD}" ]; then
+    echo "Downloading Apache Maven 3.9.6..."
+    mkdir -p "${MAVEN_HOME}"
+    TMPFILE=$(mktemp)
+    curl -sL "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.6/apache-maven-3.9.6-bin.zip" -o "${TMPFILE}"
+    unzip -q -o "${TMPFILE}" -d "${HOME}/.m2/wrapper/dists/"
+    mv "${HOME}/.m2/wrapper/dists/apache-maven-3.9.6"/* "${MAVEN_HOME}/" 2>/dev/null || true
+    rm -f "${TMPFILE}"
+    chmod +x "${MAVEN_CMD}"
+    echo "Maven 3.9.6 installed to ${MAVEN_HOME}"
+fi
+
+exec "${MAVEN_CMD}" "$@"

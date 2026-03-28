@@ -1,0 +1,11 @@
+instance,seed,success,wall_time_s,INITIAL_PENALTY_A,INITIAL_PENALTY_B,INITIAL_PENALTY_C,FINAL_PENALTY_A,FINAL_PENALTY_B,FINAL_PENALTY_C,EMPTY_HOSTS_INITIAL,EMPTY_HOSTS_FINAL,MIGRATIONS,RUNTIME_MS,error
+smoke_h8_v5_s1,42,True,1.38,0,0,0,0,0,0,0,1,38,754,
+tenant_h10_v8_s1,42,True,1.95,0,0,0,0,0,0,0,1,41,1231,
+tenant_h10_v8_s2,42,True,1.87,0,0,0,0,0,0,0,1,45,1205,
+tenant_h10_v8_s3,42,True,1.88,0,0,0,0,0,0,0,2,44,1147,
+tenant_h15_v10_s1,42,True,5.43,0,0,0,0,0,0,0,2,84,4233,
+tenant_h15_v10_s2,42,True,5.06,0,0,0,0,0,0,0,1,71,4328,
+tenant_h15_v10_s3,42,True,3.0,0,0,0,0,0,0,0,3,80,2044,
+tenant_h20_v12_s1,42,True,4.97,0,0,0,0,0,0,0,3,108,4005,
+tenant_h20_v12_s2,42,True,5.68,0,0,0,0,0,0,0,2,119,4918,
+tenant_h20_v12_s3,42,True,4.53,0,0,0,0,0,0,0,3,110,3693,
