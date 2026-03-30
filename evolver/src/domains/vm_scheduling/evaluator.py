@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 from loguru import logger
 
-from core.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluation.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 
 
 _KEY_FIELDS = [

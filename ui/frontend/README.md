@@ -108,10 +108,11 @@ ui/frontend/
     style.py              UI constants, colors, and Catppuccin Mocha theme
     views/
       metrics.py          Plots tab (fitness, diversity, viability charts)
-      geneaology.py       Genealogy tab (network graph + node inspector)
+      genealogy.py        Genealogy tab (network graph + node inspector)
       code_diff.py        Code Diff tab (side-by-side diff with highlighting)
       strategy.py         Strategies tab (expert input + strategy table + reflections)
       embedding.py        Embeddings tab (scatter plot + density heatmap)
+      cost.py             Cost tab (LLM token usage breakdown by call type)
       history.py          Reusable generation history inspector table
   .streamlit/
     config.toml           Streamlit theme configuration (dark mode)

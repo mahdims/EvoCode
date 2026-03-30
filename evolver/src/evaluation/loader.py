@@ -8,13 +8,12 @@ or delegates to the domain plugin registry for the default evaluator.
 import importlib.util
 import inspect
 import sys
-from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from loguru import logger
 
-from evaluator import BaseEvaluator
-from core.registry import DomainPluginRegistry
+from evaluation import BaseEvaluator
+from domains.registry import DomainPluginRegistry
 import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
 
@@ -40,33 +39,7 @@ def _parse_evaluator_spec(spec: str) -> Tuple[str, str | None]:
     return spec.strip(), None
 
 
-def _resolve_script_path(script_path: str) -> Path:
-    """Resolve a script path, trying multiple base directories.
-
-    Tries in order:
-        1. Absolute / CWD-relative
-        2. Relative to project root  (evolver/)
-        3. Relative to repo root     (parent of evolver/)
-        4. Relative to src/ directory (evolver/src/)
-    """
-    path = Path(script_path)
-
-    if path.is_absolute():
-        return path.resolve()
-
-    search_bases = [
-        Path.cwd(),
-        Path(__file__).parent.parent,          # evolver/
-        Path(__file__).parent.parent.parent,   # repo root
-        Path(__file__).parent,                 # evolver/src/
-    ]
-    for base in search_bases:
-        candidate = (base / path).resolve()
-        if candidate.exists():
-            return candidate
-
-    # Fall back to CWD-relative (will trigger FileNotFoundError later)
-    return (Path.cwd() / path).resolve()
+from utils.path_utils import resolve_script_path as _resolve_script_path
 
 
 def load_evaluator_from_script(evaluator_spec: str,

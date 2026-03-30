@@ -3,10 +3,10 @@
 EvoAgent - Main Entry Point for VRP Destroy Strategy Evolution
 
 Usage:
-    python evo_agent.py                     # Use default config.json
-    python evo_agent.py config.json         # Use specified config file
-    python evo_agent.py --config myexp.json # Use specified config file
-    python evo_agent.py --resume            # Resume from existing candidates
+    python evo_agent.py                          # Use default configs/default.json
+    python evo_agent.py configs/quick_test.json  # Use specified config file
+    python evo_agent.py --config myexp.json      # Use specified config file
+    python evo_agent.py --resume                 # Resume from existing candidates
 """
 
 import argparse
@@ -28,22 +28,24 @@ def load_config(config_path: str = None) -> dict:
     Load configuration from JSON file.
 
     Args:
-        config_path: Path to config file. If None, looks for config.json in script directory.
+        config_path: Path to config file. If None, looks for configs/default.json in script directory.
 
     Returns:
         Configuration dictionary
     """
     if config_path is None:
-        config_path = Path(__file__).parent / "config.json"
+        config_path = Path(__file__).parent / "configs" / "default.json"
     else:
         config_path = Path(config_path)
-        # If the given path is relative and doesn't exist from CWD, also try
-        # the directory that contains evo_agent.py (so the user can run from
-        # the repo root with just "config.json" instead of "evolver/config.json")
+        # If the given path is relative and doesn't exist from CWD, try:
+        #   1. Relative to evo_agent.py directory (e.g. "configs/quick_test.json")
+        #   2. Relative to evo_agent.py's configs/ subdirectory (e.g. just "quick_test.json")
         if not config_path.is_absolute() and not config_path.exists():
-            script_relative = Path(__file__).parent / config_path
-            if script_relative.exists():
-                config_path = script_relative
+            script_dir = Path(__file__).parent
+            for candidate in [script_dir / config_path, script_dir / "configs" / config_path]:
+                if candidate.exists():
+                    config_path = candidate
+                    break
 
     if not config_path.exists():
         logger.warning(f"[CONFIG] Config file not found: {config_path}")
@@ -224,8 +226,8 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python evo_agent.py                      # Use config.json
-    python evo_agent.py myconfig.json        # Use custom config
+    python evo_agent.py                           # Use configs/default.json
+    python evo_agent.py configs/quick_test.json   # Use named preset
     python evo_agent.py -c experiments/exp1.json
     python evo_agent.py --resume             # Resume from existing candidates
     python evo_agent.py --no-debug           # Minimal output (reflections + best only)
@@ -237,7 +239,7 @@ Examples:
         "config",
         nargs="?",
         default=None,
-        help="Path to JSON config file (default: config.json)"
+        help="Path to JSON config file (default: configs/default.json)"
     )
     parser.add_argument(
         "-c", "--config",

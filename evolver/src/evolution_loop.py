@@ -13,19 +13,17 @@ Following ReEvo framework:
 import os
 import json
 import random
-import sqlite3
 import time
-import networkx as nx
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from loguru import logger
 
-from candidate_manager import CandidateManager
-from llm_agents import LLMAgents
-from diversity_checker import DiversityChecker
-from evaluator import (
+from population.candidate_manager import CandidateManager
+from operators.llm_agents import LLMAgents
+from population.diversity_checker import DiversityChecker
+from evaluation import (
     BaseEvaluator,
     EvalResult,
     SmokeTestResult,
@@ -33,108 +31,15 @@ from evaluator import (
     compute_candidate_score_vector,
     pareto_tournament,
 )
-from evaluator_loader import create_evaluator
-from builder import BaseBuilder
-from builder_loader import create_builder
-from core.registry import DomainPluginRegistry
-from embedding_service import EmbeddingService
-from survival import survival_select
+from evaluation.loader import create_evaluator
+from building import BaseBuilder
+from building.loader import create_builder
+from domains.registry import DomainPluginRegistry
+from population.embedding_service import EmbeddingService
+from population.survival import survival_select
 import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
-# TODO: Where do we want this to go? Parameter? Static internal path? Configuration file?
-DB_PATH = os.getenv("EVOCODE_DB_PATH", "/data/evolution.db")
-
-def init_db(clear: bool = False) -> None:
-    """Initialize the database, optionally clearing all rows from a previous run.
-
-    Args:
-        clear: If True, DELETE all rows before creating tables. Pass True on a
-               fresh (non-resume) run to prevent stale generations from a prior
-               experiment bleeding into the UI.
-    """
-    # TODO: Allow DB_PATH to be configured through parameters
-    logger.debug(f"[DB INIT] Checking database at {DB_PATH}...")
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-    with sqlite3.connect(DB_PATH) as conn:
-        try:
-            conn.execute("PRAGMA journal_mode=WAL;")
-        except:
-            pass
-
-        # Create table with new schema
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS metrics (
-                generation INTEGER PRIMARY KEY,
-                global_best REAL,
-                avg_fitness REAL,
-                viability_rate REAL,
-                diversity REAL,
-                timestamp REAL,
-                additional_metrics TEXT
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS snapshots (
-                generation INTEGER PRIMARY KEY,
-                genealogy_json TEXT,
-                best_code_snippet TEXT,
-                strategies_json TEXT,
-                embeddings_json TEXT
-            )
-        """)
-
-        # Global strategy table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS strategies (
-                idea TEXT PRIMARY KEY,
-                direction TEXT,
-                status TEXT,
-                impact TEXT,
-                best_fit REAL
-            )
-        """)
-
-        # Global reflection table
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS reflections (
-                generation INTEGER PRIMARY KEY,
-                content TEXT,
-                timestamp REAL
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS llm_stats (
-                generation INTEGER PRIMARY KEY,
-                total_calls INTEGER,
-                input_tokens INTEGER,
-                output_tokens INTEGER,
-                call_breakdown TEXT,
-                wall_time_sec REAL,
-                process_cpu_pct REAL,
-                process_mem_mb REAL,
-                timestamp REAL
-            )
-        """)
-
-        # Migration logic (safe to keep — all tables exist at this point)
-        try:
-            conn.execute("SELECT additional_metrics FROM metrics LIMIT 1")
-        except sqlite3.OperationalError:
-            logger.debug("[DB INIT] Migrating DB: Adding additional_metrics column...")
-            conn.execute("ALTER TABLE metrics ADD COLUMN additional_metrics TEXT")
-
-        if clear:
-            logger.debug("[DB INIT] Clearing stale rows from previous run...")
-            conn.execute("DELETE FROM metrics")
-            conn.execute("DELETE FROM snapshots")
-            conn.execute("DELETE FROM reflections")
-            conn.execute("DELETE FROM strategies")
-            conn.execute("DELETE FROM llm_stats")
-
-    logger.debug("[DB INIT] Database initialized.")
+from persistence.db_logger import init_db, log_generation as _log_generation  # noqa: F401 — init_db re-exported
 
 @dataclass
 class MultiObjectiveConfig:
@@ -329,7 +234,7 @@ class EvolutionLoop:
         self.diversity_checker = DiversityChecker(similarity_threshold=0.80)
 
         # Strategy history tracking for interpretability
-        from idea_history_tracker import IdeaHistoryTracker
+        from population.idea_history_tracker import IdeaHistoryTracker
         self.idea_history = IdeaHistoryTracker()
         self._prev_iteration_best = 0.0  # Track improvement trends
         self._generation_start_counter = 0  # Track candidates tested per generation
@@ -1156,389 +1061,146 @@ class EvolutionLoop:
         self.save_idea_evolution_log()
 
     def _log_generation_to_db(self, offspring_list: list, num_attempted: int, all_candidates: list = None, wall_time: float = 0.0):
-        """
-        Centralized DB logging: Updates Global Strategy Table + Snapshots.
-        """
-        DB_PATH = "/data/evolution.db"
-
-        viability = len(offspring_list) / num_attempted if num_attempted > 0 else 0.0
-
-        if not self.population:
-            return
-
-        fitnesses = [c["fitness"] for c in self.population]
-        best_candidate = max(self.population, key=lambda x: x["fitness"])
-
-        global_best = best_candidate["fitness"]
-        avg_fitness = np.mean(fitnesses)
-        diversity_info = self.embedding_service.compute_population_diversity(self.population)
-        diversity = diversity_info["avg_diversity"] if diversity_info else np.var(fitnesses)
-
-        # Geneaology tree
-        for child in offspring_list:
-            self.history[child['candidate_id']] = child
-
-        for ind in self.population:
-            if ind['candidate_id'] not in self.history:
-                self.history[ind['candidate_id']] = ind
-
-        G = nx.DiGraph()
-        living_ids = {ind['candidate_id'] for ind in self.population}
-
-        for cid, data in self.history.items():
-            is_alive = cid in living_ids
-            G.add_node(
-                cid,
-                fitness=data.get("fitness", 0),
-                code=data.get("code", ""),
-                label=str(cid),
-                alive=is_alive,
-                generation=data.get("generation", 0)
-            )
-
-            if data.get("parent_id") in self.history:
-                G.add_edge(data.get("parent_id"), cid)
-
-        genealogy_json = json.dumps(nx.node_link_data(G))
-
-        # Directions Data
-        for child in offspring_list:
-            idea_key = child.get("idea")
-            if not idea_key or len(idea_key) < 5:
-                continue
-
-            child_fitness = child.get("fitness", 0.0)
-            mutation_type = child.get("mutation_type", "Evolution")
-
-            # Initialize or Update
-            if idea_key not in self.strategy_registry:
-                status = "Succeeded" if child_fitness > avg_fitness else "Exploring"
-                self.strategy_registry[idea_key] = {
-                    "Direction": mutation_type,
-                    "Idea": idea_key,
-                    "Status": status,
-                    "Impact": f"{child_fitness:.4f}",
-                    "Best_Fit": child_fitness
-                }
-            else:
-                entry = self.strategy_registry[idea_key]
-                prev_best = entry.get("Best_Fit", -float('inf'))
-
-                if child_fitness > prev_best:
-                    entry["Best_Fit"] = child_fitness
-                    entry["Impact"] = f"{child_fitness:.4f}"
-                    if child_fitness > avg_fitness:
-                        entry["Status"] = "Succeeded"
-
-                if entry["Status"] == "Exploring" and child_fitness < (avg_fitness * 0.8):
-                     entry["Status"] = "Abandoned"
-
-        # Reflections
-        reflection_content = getattr(self, "long_term_reflection", "")
-
-        # Embeddings data — use all candidates evaluated this generation (elites + offspring),
-        # falling back to score-based pseudo-embeddings if API unavailable.
-        embedding_candidates = all_candidates if all_candidates is not None else self.population
-        embeddings = self.embedding_service.compute_2d_embeddings(embedding_candidates)
-
-        if embeddings is None:
-            # Fallback: score_vector values as x/y for all evaluated candidates
-            import random as _random
-            embeddings = []
-            for idx, child in enumerate(embedding_candidates):
-                fitness = child.get("fitness", 0.0)
-                score_dict = child.get("score_vector", {})
-                if not isinstance(score_dict, dict): score_dict = {}
-                clean_values = []
-                for k in sorted(score_dict.keys()):
-                    val = score_dict[k]
-                    if val == float('inf') or val == -float('inf'): val = 0.0
-                    clean_values.append(val)
-                if len(clean_values) >= 2:
-                    x_val, y_val = clean_values[0], clean_values[1]
-                elif len(clean_values) == 1:
-                    # Single score: use fitness as x, add index-based jitter as y
-                    x_val = clean_values[0]
-                    y_val = idx * 0.01 + _random.uniform(-0.005, 0.005)
-                else:
-                    x_val = idx * 0.01
-                    y_val = _random.uniform(-0.005, 0.005)
-                embeddings.append({
-                    "x": x_val, "y": y_val,
-                    "Strategy Cluster": str(child.get("mutation_type", "Initial")),
-                    "Fitness": fitness
-                })
-
-        embeddings_json = json.dumps(embeddings)
-
-        # Collect LLM call stats for this generation
-        llm_call_stats = self.llm.get_and_reset_stats() if hasattr(self, 'llm') else {}
-        total_calls   = sum(v["calls"]        for v in llm_call_stats.values())
-        input_tokens  = sum(v["input_tokens"] for v in llm_call_stats.values())
-        output_tokens = sum(v["output_tokens"] for v in llm_call_stats.values())
-        call_breakdown_json = json.dumps(llm_call_stats)
-
-        # Collect process resource snapshot
-        try:
-            import psutil as _psutil
-            _proc = _psutil.Process()
-            _proc.cpu_percent(interval=None)   # prime the counter
-            process_cpu_pct = _proc.cpu_percent(interval=0.05)
-            process_mem_mb  = _proc.memory_info().rss / 1e6
-        except Exception:
-            process_cpu_pct = 0.0
-            process_mem_mb  = 0.0
-
-        # Put in DB now
-        try:
-            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-            with sqlite3.connect(DB_PATH) as conn:
-                try:
-                    conn.execute("PRAGMA journal_mode=WAL;")
-                except:
-                    pass
-
-                # Sync Registry to Global Table
-                for s in self.strategy_registry.values():
-                    conn.execute(
-                        "INSERT OR REPLACE INTO strategies VALUES (?, ?, ?, ?, ?)",
-                        (s["Idea"], s["Direction"], s["Status"], s["Impact"], s.get("Best_Fit", 0.0))
-                    )
-
-                # Insert Metrics
-                conn.execute(
-                    "INSERT OR REPLACE INTO metrics VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (self.generation, global_best, avg_fitness, viability, diversity, time.time(), "{}")
-                )
-
-                # Insert Snapshot
-                # We still write 'strategies_json' here for backward compatibility with your current dashboard,
-                # but the global 'strategies' table is now the source of truth.
-                current_strategies_list = json.dumps(list(self.strategy_registry.values()))
-
-                conn.execute(
-                    "INSERT OR REPLACE INTO snapshots VALUES (?, ?, ?, ?, ?)",
-                    (self.generation, genealogy_json, best_candidate.get("code", ""),
-                     current_strategies_list, embeddings_json)
-                )
-
-                conn.execute(
-                    "INSERT OR REPLACE INTO reflections VALUES (?, ?, ?)",
-                    (self.generation, reflection_content, time.time())
-                )
-
-                conn.execute(
-                    "INSERT OR REPLACE INTO llm_stats VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (self.generation, total_calls, input_tokens, output_tokens,
-                     call_breakdown_json, wall_time, process_cpu_pct, process_mem_mb, time.time())
-                )
-
-        except Exception as e:
-            # Replace with logger.error if available
-            print(f"[DB Error] Failed to log generation {self.generation}: {e}")
+        """Persist generation metrics, genealogy, and strategy table to SQLite."""
+        _log_generation(
+            generation=self.generation,
+            population=self.population,
+            offspring_list=offspring_list,
+            num_attempted=num_attempted,
+            history=self.history,
+            strategy_registry=self.strategy_registry,
+            embedding_service=self.embedding_service,
+            llm=self.llm,
+            long_term_reflection=getattr(self, "long_term_reflection", ""),
+            all_candidates=all_candidates,
+            wall_time=wall_time,
+        )
 
     def _evolve_generation_batch(self, num_offspring: int) -> List[Dict[str, Any]]:
-        """
-        Evolve one generation using work-stealing pipeline.
+        """Evolve one generation using the work-stealing parallel pipeline."""
+        from operators.pipeline import generate_offspring_batch
+        from threading import Lock
 
-        Each worker handles a complete candidate: Generate → Compile → Smoke → Evaluate
-        Workers pull tasks from a shared queue until all offspring are processed.
-        """
-        from queue import Queue
-        from threading import Thread, Lock
+        short_term_lock = Lock()
 
-        # Task queue: indices of offspring to generate
-        task_queue = Queue()
-        for i in range(num_offspring):
-            task_queue.put(i)
+        def _generate_one(idx: int, candidate_id: int):
+            """Generate → Build → Smoke → Evaluate one candidate."""
+            # === Stage 1: Generate ===
+            use_crossover = random.random() < self.crossover_rate
 
-        # Results collection
-        results = []
-        results_lock = Lock()
+            if use_crossover and len(self.population) >= 2:
+                better_parent, worse_parent = self.select_parents()
+                logger.debug(f"[Pipeline] Offspring {idx+1}/{num_offspring}: Crossover "
+                             f"{better_parent['candidate_id']} x {worse_parent['candidate_id']}")
 
-        # Track candidate IDs
-        candidate_id_counter = [self.candidate_counter]
-        candidate_id_lock = Lock()
+                short_term_reflection = self.llm.reflect_short_term(
+                    better_code=better_parent["code"],
+                    better_results=better_parent["eval_results"],
+                    worse_code=worse_parent["code"],
+                    worse_results=worse_parent["eval_results"],
+                )
+                with short_term_lock:
+                    self.short_term_reflections.append(short_term_reflection)
 
-        def get_next_candidate_id():
-            with candidate_id_lock:
-                cid = candidate_id_counter[0]
-                candidate_id_counter[0] += 1
-                return cid
+                offspring_idea, offspring_code = self.llm.crossover(
+                    parent1_code=better_parent["code"],
+                    parent2_code=worse_parent["code"],
+                    parent1_results=better_parent["eval_results"],
+                    parent2_results=worse_parent["eval_results"],
+                    short_term_reflection=short_term_reflection,
+                    parent1_idea=better_parent.get("idea"),
+                    parent2_idea=worse_parent.get("idea"),
+                    use_vrpagent_bias=self.use_vrpagent,
+                    elite_bias=0.75,
+                )
+                parent_id = better_parent["candidate_id"]
+                mutation_type = "crossover"
+            else:
+                elite_parent = max(self.population, key=lambda x: x["fitness"])
+                logger.debug(f"[Pipeline] Offspring {idx+1}/{num_offspring}: Mutation from "
+                             f"elite {elite_parent['candidate_id']}")
 
-        # Sentinel for stopping workers
-        DONE = object()
-
-        def worker(worker_id):
-            """Process candidates end-to-end: Generate → Compile → Smoke → Evaluate."""
-            while True:
-                task = task_queue.get()
-                if task is DONE:
-                    task_queue.task_done()
-                    break
-
-                idx = task
-                candidate_id = get_next_candidate_id()
-
-                try:
-                    # === Stage 1: Generate ===
-                    use_crossover = random.random() < self.crossover_rate
-
-                    if use_crossover and len(self.population) >= 2:
-                        better_parent, worse_parent = self.select_parents()
-                        logger.debug(f"[Worker{worker_id}] Generating offspring {idx+1}/{num_offspring}: Crossover {better_parent['candidate_id']} x {worse_parent['candidate_id']}")
-
-                        short_term_reflection = self.llm.reflect_short_term(
-                            better_code=better_parent["code"],
-                            better_results=better_parent["eval_results"],
-                            worse_code=worse_parent["code"],
-                            worse_results=worse_parent["eval_results"]
-                        )
-                        with results_lock:
-                            self.short_term_reflections.append(short_term_reflection)
-
-                        # Get parent ideas for context
-                        parent1_idea = better_parent.get("idea")
-                        parent2_idea = worse_parent.get("idea")
-
-                        offspring_idea, offspring_code = self.llm.crossover(
-                            parent1_code=better_parent["code"],
-                            parent2_code=worse_parent["code"],
-                            parent1_results=better_parent["eval_results"],
-                            parent2_results=worse_parent["eval_results"],
-                            short_term_reflection=short_term_reflection,
-                            parent1_idea=parent1_idea,
-                            parent2_idea=parent2_idea,
-                            use_vrpagent_bias=self.use_vrpagent,
-                            elite_bias=0.75
-                        )
-                        parent_id = better_parent["candidate_id"]
-                        mutation_type = "crossover"
-                    else:
-                        elite_parent = max(self.population, key=lambda x: x["fitness"])
-                        logger.debug(f"[Worker{worker_id}] Generating offspring {idx+1}/{num_offspring}: Mutation from elite {elite_parent['candidate_id']}")
-
-                        mutation_type = None
-                        if self.use_vrpagent:
-                            from vrpagent_prompts import VRPAgentPrompts
-                            mutation_type = VRPAgentPrompts.select_mutation_type(
-                                elite_code=elite_parent["code"],
-                                generation=self.generation,
-                                long_term_reflection=self.long_term_reflection
-                            )
-
-                        # Get parent idea for context
-                        parent_idea = elite_parent.get("idea")
-
-                        offspring_idea, offspring_code = self.llm.mutate(
-                            parent_code=elite_parent["code"],
-                            parent_results=elite_parent["eval_results"],
-                            long_term_reflection=self.long_term_reflection,
-                            parent_idea=parent_idea,
-                            mutation_strength=0.3,
-                            mutation_type=mutation_type,
-                            generation=self.generation
-                        )
-                        parent_id = elite_parent["candidate_id"]
-                        mutation_type = mutation_type or "mutation"
-
-                    # === Stage 2: Build (compile + package) ===
-                    compile_result = self.candidate_manager.build_candidate(
-                        source_code=offspring_code,
-                        candidate_id=candidate_id,
-                        idea=offspring_idea,
+                mutation_type = None
+                if self.use_vrpagent:
+                    from vrpagent_prompts import VRPAgentPrompts
+                    mutation_type = VRPAgentPrompts.select_mutation_type(
+                        elite_code=elite_parent["code"],
                         generation=self.generation,
-                        parent_id=parent_id,
-                        mutation_type=mutation_type
+                        long_term_reflection=self.long_term_reflection,
                     )
 
-                    if not compile_result:
-                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed to build")
-                        continue
+                offspring_idea, offspring_code = self.llm.mutate(
+                    parent_code=elite_parent["code"],
+                    parent_results=elite_parent["eval_results"],
+                    long_term_reflection=self.long_term_reflection,
+                    parent_idea=elite_parent.get("idea"),
+                    mutation_strength=0.3,
+                    mutation_type=mutation_type,
+                    generation=self.generation,
+                )
+                parent_id = elite_parent["candidate_id"]
+                mutation_type = mutation_type or "mutation"
 
-                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} built")
+            # === Stage 2: Build ===
+            compile_result = self.candidate_manager.build_candidate(
+                source_code=offspring_code,
+                candidate_id=candidate_id,
+                idea=offspring_idea,
+                generation=self.generation,
+                parent_id=parent_id,
+                mutation_type=mutation_type,
+            )
+            if not compile_result:
+                logger.warning(f"[Pipeline] Candidate {candidate_id} failed to build")
+                return None
 
-                    # === Stage 3: Smoke Test ===
-                    smoke_result = self.evaluator.smoke_test(
-                        compile_result["artifact_path"],
-                        compile_result["entry_point"]
-                    )
+            # === Stage 3: Smoke Test ===
+            smoke_result = self.evaluator.smoke_test(
+                compile_result["artifact_path"], compile_result["entry_point"]
+            )
+            if not smoke_result.success:
+                logger.warning(f"[Pipeline] Candidate {candidate_id} failed smoke test")
+                return None
 
-                    if not smoke_result.success:
-                        logger.warning(f"[Worker{worker_id}] Candidate {candidate_id} failed smoke test")
-                        continue
+            # === Stage 4: Evaluate ===
+            eval_results_new = self.evaluator.evaluate(
+                compile_result["artifact_path"], compile_result["entry_point"]
+            )
+            eval_results = self._eval_results_to_legacy(eval_results_new)
+            score_vector = self._compute_score_vector(eval_results_new)
+            base_fitness = self._compute_fitness(eval_results_new)
+            fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
 
-                    logger.debug(f"[Worker{worker_id}] Candidate {candidate_id} passed smoke test")
+            self.candidate_manager.update_evaluation_results(
+                candidate_id=candidate_id,
+                eval_results=eval_results,
+                fitness=fitness,
+                base_fitness=base_fitness,
+                generation=self.generation,
+                score_vector=score_vector,
+            )
 
-                    # === Stage 4: Evaluate (via pluggable evaluator) ===
-                    eval_results_new = self.evaluator.evaluate(
-                        compile_result["artifact_path"],
-                        compile_result["entry_point"]
-                    )
-                    eval_results = self._eval_results_to_legacy(eval_results_new)
-                    score_vector = self._compute_score_vector(eval_results_new)
+            logger.info(f"[Pipeline] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
+            return {
+                "candidate_id": candidate_id,
+                "code": offspring_code,
+                "idea": offspring_idea,
+                "metadata": compile_result,
+                "eval_results": eval_results,
+                "fitness": fitness,
+                "base_fitness": base_fitness,
+                "generation": self.generation,
+                "parent_id": parent_id,
+                "mutation_type": mutation_type,
+                "score_vector": score_vector,
+            }
 
-                    base_fitness = self._compute_fitness(eval_results_new)
-                    fitness = self._calculate_fitness_with_penalty(offspring_code, base_fitness)
-
-                    # Save evaluation results
-                    self.candidate_manager.update_evaluation_results(
-                        candidate_id=candidate_id,
-                        eval_results=eval_results,
-                        fitness=fitness,
-                        base_fitness=base_fitness,
-                        generation=self.generation,
-                        score_vector=score_vector
-                    )
-
-                    offspring = {
-                        "candidate_id": candidate_id,
-                        "code": offspring_code,
-                        "idea": offspring_idea,
-                        "metadata": compile_result,
-                        "eval_results": eval_results,
-                        "fitness": fitness,
-                        "base_fitness": base_fitness,
-                        "generation": self.generation,
-                        "parent_id": parent_id,
-                        "mutation_type": mutation_type,
-                        "score_vector": score_vector,
-                    }
-
-                    with results_lock:
-                        results.append(offspring)
-
-                    logger.info(f"[Worker{worker_id}] Candidate {candidate_id} complete: fitness={fitness*100:.4f}%")
-
-                except Exception as e:
-                    logger.error(f"[Worker{worker_id}] Candidate {candidate_id} failed with error: {e}")
-
-                finally:
-                    task_queue.task_done()
-
-        # === Start Workers ===
-        actual_workers = min(self.num_workers, num_offspring)
-        logger.debug(f"[PIPELINE] Starting {actual_workers} workers for {num_offspring} offspring")
-
-        workers = [Thread(target=worker, args=(i,), daemon=True) for i in range(actual_workers)]
-        for w in workers:
-            w.start()
-
-        # Wait for all tasks to complete
-        task_queue.join()
-
-        # Signal workers to stop
-        for _ in range(actual_workers):
-            task_queue.put(DONE)
-
-        # Wait for workers to finish
-        for w in workers:
-            w.join(timeout=1)
-
-        # Update candidate counter
-        self.candidate_counter = candidate_id_counter[0]
-
-        logger.debug(f"[PIPELINE] Complete: {len(results)}/{num_offspring} offspring evaluated")
+        results, self.candidate_counter = generate_offspring_batch(
+            num_offspring=num_offspring,
+            num_workers=self.num_workers,
+            starting_candidate_id=self.candidate_counter,
+            generate_one=_generate_one,
+        )
         return results
 
     def _calculate_fitness_with_penalty(self, code: str, base_fitness: float) -> float:
@@ -1568,219 +1230,35 @@ class EvolutionLoop:
 
     def _display_long_term_reflection(self) -> None:
         """Format and display long-term reflection in a clean, readable format."""
-        if not self.long_term_reflection:
-            return
-
-        # Parse the reflection into sections
-        lines = self.long_term_reflection.strip().split('\n')
-
-        # Print header
-        logger.info("")
-        logger.info("=" * 80)
-        logger.info("CUMULATIVE KNOWLEDGE - Strategic Insights")
-        logger.info("=" * 80)
-
-        current_section = None
-        section_items = []
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Detect section headers (lines starting with ##)
-            if stripped.startswith('##'):
-                # Print previous section if exists
-                if current_section and section_items:
-                    logger.info(f" ")
-                    logger.info(f"{current_section}")
-                    logger.info("-" * 60)
-                    for item in section_items:
-                        logger.info(f"  {item}")
-                    section_items = []
-
-                # Start new section
-                current_section = stripped.replace('##', '').strip()
-
-            # Detect bullet points
-            elif stripped.startswith('-') or stripped.startswith('*'):
-                # Clean up bullet and extract content
-                content = stripped.lstrip('-*').strip()
-                # Handle bold markdown **text**
-                content = content.replace('**', '')
-                section_items.append(f"• {content}")
-
-            # Handle non-empty lines that aren't headers or bullets
-            elif stripped and not stripped.startswith('='):
-                section_items.append(f"  {stripped}")
-
-        # Print final section
-        if current_section and section_items:
-            logger.info(f" ")
-            logger.info(f"{current_section}")
-            logger.info("-" * 60)
-            for item in section_items:
-                logger.info(f"  {item}")
-
-        logger.info("")
-        logger.info("=" * 80)
+        from persistence.reporting import display_long_term_reflection
+        display_long_term_reflection(self.long_term_reflection)
 
     def _report_iteration_statistics(self) -> None:
         """Report comprehensive statistics for current iteration."""
-        # Calculate fitness statistics
-        fitnesses = [c["fitness"] for c in self.population]
-        best = max(self.population, key=lambda x: x["fitness"])
-        worst = min(self.population, key=lambda x: x["fitness"])
-        avg_fitness = sum(fitnesses) / len(fitnesses)
-
-        # Count variations tested
-        # This generation: calculate from candidate_counter difference
-        gen_tested = self.candidate_counter - self._generation_start_counter
-
-        # Total tested: all candidates created so far
-        total_tested = self.candidate_counter
-
-        # Report using logger.info
-        logger.info("")
-        logger.info("-" * 80)
-        logger.info(f"Generation {self.generation} - Statistics Summary")
-        logger.info("-" * 80)
-        logger.info(f"  Candidates tested this generation: {gen_tested}")
-        logger.info(f"  Total candidates tested: {total_tested}")
-        logger.info(f"  Best solution: ID={best['candidate_id']}, fitness={best['fitness']*100:.4f}%")
-
-        # Show best idea on new line
-        best_idea = best.get('idea', 'N/A')
-        if len(best_idea) > 120:
-            best_idea = best_idea[:117] + "..."
-        logger.info(f"  Best idea: {best_idea}")
-
-        logger.info(f"  Worst solution: ID={worst['candidate_id']}, fitness={worst['fitness']*100:.4f}%")
-        logger.info(f"  Average population fitness: {avg_fitness*100:.4f}%")
-        logger.info("-" * 80)
+        from persistence.reporting import report_iteration_statistics
+        report_iteration_statistics(
+            self.generation, self.candidate_counter,
+            self._generation_start_counter, self.population,
+        )
 
     def _report_strategy_progress(self) -> None:
         """Generate and display strategy progress report for user interpretability."""
-
-        # Gather current strategies with performance
-        current_strategies = [
-            {
-                "idea": c.get("idea"),
-                "performance": c.get("fitness", 0.0),
-                "candidate_id": c.get("candidate_id")
-            }
-            for c in self.population
-            if c.get("idea") is not None
-        ]
-
-        # Skip if no ideas
-        if not current_strategies:
-            return
-
-        # Get historical context (limit to recent for manageable prompt size)
-        historical_ideas = self.idea_history.get_historical_ideas_with_performance(limit=15)
-
-        # Performance metrics
-        fitnesses = [c["fitness"] for c in self.population]
-        perf_summary = self.idea_history.get_performance_summary()
-
-        performance_metrics = {
-            "best": max(fitnesses),
-            "average": sum(fitnesses) / len(fitnesses),
-            "total_tested": perf_summary.get("total_tested", 0),
-            "improvement": 0.0
-        }
-
-        # Calculate improvement from previous iteration
-        if hasattr(self, '_prev_iteration_best'):
-            performance_metrics["improvement"] = performance_metrics["best"] - self._prev_iteration_best
-
-        self._prev_iteration_best = performance_metrics["best"]
-
-        # Call LLM for analysis
-        analysis = self.llm.analyze_strategy_directions(
-            current_strategies=current_strategies,
-            historical_ideas=historical_ideas,
-            long_term_reflection=self.long_term_reflection,
-            iteration=self.generation,
-            performance_metrics=performance_metrics
-        )
-
-        # Display to user (always visible using reflection logging)
-        logger.info(
-            f"\n{'='*70}\n"
-            f"EXPOLRATION STRATEGIES - Iteration {self.generation}\n"
-            f"{'='*70}\n"
-            f"{analysis}\n"
-            f"{'='*70}\n"
+        from persistence.reporting import report_strategy_progress
+        self._prev_iteration_best = report_strategy_progress(
+            self.generation, self.population, self.idea_history,
+            self.llm, self.long_term_reflection,
+            getattr(self, '_prev_iteration_best', None),
         )
 
     def print_final_statistics(self) -> None:
         """Print final evolution statistics (always shown)."""
-        best = max(self.population, key=lambda x: x["fitness"])
-
-        logger.info(f"{'='*80}")
-        logger.info(f"FINAL STATISTICS")
-        logger.info(f"{'='*80}")
-        logger.info(f"Total candidates evaluated: {self.candidate_counter}")
-        logger.info(f"Final population size: {len(self.population)}")
-        logger.info(f"Best candidate ID: {best['candidate_id']}")
-        logger.info(f"Best fitness: {best['fitness']*100:.4f}%")
-        if self.use_vrpagent and "base_fitness" in best:
-            logger.info(f"Best base fitness (no penalty): {best['base_fitness']*100:.4f}%")
-        logger.info(f"Best generation: {best['generation']}")
-
-        # Show best candidate's idea
-        if best.get("idea"):
-            logger.info(f"")
-            logger.info(f"Best candidate idea:")
-            logger.info(f"  {best['idea']}")
-
-        logger.info(f"Best candidate performance:")
-        for result in best["eval_results"]:
-            instance_name = result.get('instance', result.get('name', 'unknown'))
-            improvement = result.get('improvement', result.get('improvement_pct', 0) / 100)
-            logger.info(f"  {instance_name}: {improvement*100:.3f}% improvement")
-
-        # Code length statistics
-        if self.use_vrpagent:
-            code_lines = len([l for l in best["code"].split('\n')
-                            if l.strip() and not l.strip().startswith('//')
-                            and not l.strip().startswith('package')
-                            and not l.strip().startswith('import')])
-            logger.info(f"Best candidate code length: {code_lines} lines")
-
-        logger.info(f"\n{'='*80}\n")
+        from persistence.reporting import print_final_statistics
+        print_final_statistics(self.population, self.candidate_counter, self.use_vrpagent)
 
     def save_idea_evolution_log(self, log_file: str = None) -> None:
         """Save evolution history of ideas for analysis."""
-        if log_file is None:
-            log_file = str(self.candidates_dir / "idea_evolution.md")
-
-        with open(log_file, 'w') as f:
-            f.write("# Idea Evolution Log\n\n")
-            f.write(f"Generated from {len(self.population)} candidates\n\n")
-
-            # Sort by generation
-            sorted_pop = sorted(self.population, key=lambda x: x.get("generation", 0))
-
-            for candidate in sorted_pop:
-                f.write(f"## Generation {candidate.get('generation', 0)} - "
-                       f"Candidate {candidate['candidate_id']}\n\n")
-                f.write(f"**Fitness:** {candidate['fitness']*100:.4f}%\n\n")
-                f.write(f"**Mutation Type:** {candidate.get('mutation_type', 'unknown')}\n\n")
-
-                if candidate.get("parent_id") is not None:
-                    f.write(f"**Parent ID:** {candidate['parent_id']}\n\n")
-
-                if candidate.get("idea"):
-                    f.write("### Idea\n\n")
-                    f.write(candidate["idea"])
-                    f.write("\n\n")
-                else:
-                    f.write("*[No idea available - legacy candidate]*\n\n")
-
-                f.write("---\n\n")
-
-        logger.info(f"[LOG] Saved idea evolution to {log_file}")
+        from persistence.reporting import save_idea_evolution_log
+        save_idea_evolution_log(self.population, self.candidates_dir, log_file)
 
 
 # Example usage

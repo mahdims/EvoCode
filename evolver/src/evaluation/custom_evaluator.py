@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import List
 
-from core.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from .base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 from domains.ails_vrp.evaluator_stub import Evaluator
 
 

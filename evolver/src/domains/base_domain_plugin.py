@@ -14,8 +14,8 @@ parallelism) completely domain-agnostic.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from .base_builder import BaseBuilder
-from .base_evaluator import BaseEvaluator
+from building.base_builder import BaseBuilder
+from evaluation.base_evaluator import BaseEvaluator
 
 
 class BaseDomainPlugin(ABC):

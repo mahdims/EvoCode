@@ -20,6 +20,64 @@ from loguru import logger
 GEMINI_PROVIDERS = ["google", "gemini"]
 OPENAI_PROVIDERS = ["openai", "modelarts"]
 
+
+# ---------------------------------------------------------------------------
+# Provider adapters — add a new provider by adding a subclass + entry in map
+# ---------------------------------------------------------------------------
+
+class _ProviderAdapter:
+    """Protocol for provider-specific API call and response handling."""
+
+    def generate(self, client, model_name: str, prompt, stats_lock, call_stats, call_type: str):
+        raise NotImplementedError
+
+    def get_text(self, response) -> str:
+        raise NotImplementedError
+
+
+class _GeminiAdapter(_ProviderAdapter):
+    def generate(self, client, model_name: str, prompt, stats_lock, call_stats, call_type: str):
+        response = client.models.generate_content(model=model_name, contents=prompt)
+        usage = getattr(response, 'usage_metadata', None)
+        in_tok  = getattr(usage, 'prompt_token_count', 0) or 0 if usage else 0
+        out_tok = getattr(usage, 'candidates_token_count', 0) or 0 if usage else 0
+        with stats_lock:
+            b = call_stats.setdefault(call_type, {"calls": 0, "input_tokens": 0, "output_tokens": 0})
+            b["calls"] += 1; b["input_tokens"] += in_tok; b["output_tokens"] += out_tok
+        return response
+
+    def get_text(self, response) -> str:
+        return response.text
+
+
+class _OpenAIAdapter(_ProviderAdapter):
+    def generate(self, client, model_name: str, prompt, stats_lock, call_stats, call_type: str):
+        if isinstance(prompt, str):
+            messages = [{"role": "user", "content": prompt}]
+        elif isinstance(prompt, list) and all(isinstance(x, str) for x in prompt):
+            messages = [{"role": "user", "content": " ".join(prompt)}]
+        else:
+            messages = prompt
+        response = client.chat.completions.create(model=model_name, messages=messages)
+        usage = getattr(response, 'usage', None)
+        in_tok  = getattr(usage, 'prompt_tokens', 0) or 0 if usage else 0
+        out_tok = getattr(usage, 'completion_tokens', 0) or 0 if usage else 0
+        with stats_lock:
+            b = call_stats.setdefault(call_type, {"calls": 0, "input_tokens": 0, "output_tokens": 0})
+            b["calls"] += 1; b["input_tokens"] += in_tok; b["output_tokens"] += out_tok
+        return response
+
+    def get_text(self, response) -> str:
+        return response.choices[0].message.content
+
+
+_PROVIDER_MAP: dict = {
+    "google":    _GeminiAdapter,
+    "gemini":    _GeminiAdapter,
+    "openai":    _OpenAIAdapter,
+    "modelarts": _OpenAIAdapter,
+}
+
 # Load environment variables if dotenv is available
 try:
     from dotenv import load_dotenv
@@ -78,6 +136,7 @@ class LLMAgents:
         self.model_name = model
         self.client = None
         self.provider = provider.lower()
+        self._adapter: Optional[_ProviderAdapter] = None
 
         self._stats_lock = threading.Lock()
         self._call_stats: Dict[str, Dict[str, int]] = {}
@@ -111,14 +170,18 @@ class LLMAgents:
         )
 
     def _initialize_client(self) -> None:
-        """Internal helper to setup the specific provider"""
+        """Set up the provider client and select the matching adapter."""
         try:
+            adapter_cls = _PROVIDER_MAP.get(self.provider)
+            if adapter_cls is None:
+                raise ValueError(f"Unsupported provider: {self.provider}. "
+                                 f"Available: {list(_PROVIDER_MAP)}")
+            self._adapter: _ProviderAdapter = adapter_cls()
+
             if self.provider in GEMINI_PROVIDERS:
                 self._setup_gemini()
-            elif self.provider in ["openai", "modelarts"]:
-                self._setup_openai_compatible()
             else:
-                raise ValueError(f"Unsupported provider: {self.provider}")
+                self._setup_openai_compatible()
         except Exception as e:
             logger.warning(f"[WARNING] LLM Setup failed: {e}. Falling back to templates.")
             self.use_llm = False
@@ -159,33 +222,10 @@ class LLMAgents:
             logger.debug(f"[LLM] Using OpenAI-compatible model: {self.model_name}")
 
     def _generate_content(self, prompt, call_type: str = "unknown"):
-        if self.provider in GEMINI_PROVIDERS:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=prompt
-            )
-            usage = getattr(response, 'usage_metadata', None)
-            in_tok  = getattr(usage, 'prompt_token_count', 0) or 0 if usage else 0
-            out_tok = getattr(usage, 'candidates_token_count', 0) or 0 if usage else 0
-        else:
-            assert self.provider in OPENAI_PROVIDERS
-            response = self.client.chat.completions.create(
-                model=self.model_name,
-                messages=self._convert_prompt(prompt)
-            )
-            usage = getattr(response, 'usage', None)
-            in_tok  = getattr(usage, 'prompt_tokens', 0) or 0 if usage else 0
-            out_tok = getattr(usage, 'completion_tokens', 0) or 0 if usage else 0
-
-        with self._stats_lock:
-            bucket = self._call_stats.setdefault(
-                call_type, {"calls": 0, "input_tokens": 0, "output_tokens": 0}
-            )
-            bucket["calls"] += 1
-            bucket["input_tokens"] += in_tok
-            bucket["output_tokens"] += out_tok
-
-        return response
+        return self._adapter.generate(
+            self.client, self.model_name, prompt,
+            self._stats_lock, self._call_stats, call_type,
+        )
 
     def get_and_reset_stats(self) -> Dict[str, Dict[str, int]]:
         """Return accumulated LLM call stats and reset the counters."""
@@ -195,19 +235,7 @@ class LLMAgents:
         return stats
 
     def _get_response_text(self, response) -> str:
-        if self.provider in GEMINI_PROVIDERS:
-            text = response.text
-        else:
-            assert self.provider in OPENAI_PROVIDERS
-            text = response.choices[0].message.content
-        return text
-
-    def _convert_prompt(self, prompt) -> List[Dict[str, str]]:
-        if isinstance(prompt, str):
-            return [{"role": "user", "content": prompt}]
-
-        if isinstance(prompt, list) and all(isinstance(x, str) for x in prompt):
-            return [{"role": "user", "content": " ".join(prompt)}]
+        return self._adapter.get_text(response)
 
     def generate_initial_seed(self, seed_id: int) -> tuple:
         """
@@ -230,7 +258,7 @@ class LLMAgents:
             return seeds[seed_id % len(seeds)]
         else:
             # Absolute fallback (should not happen with proper domain_context)
-            from builder.ails_builder import get_ails_initial_seeds
+            from domains.ails_vrp.templates import get_ails_initial_seeds
             fallback = get_ails_initial_seeds()
             idx = seed_id % len(fallback)
             return fallback[idx]
@@ -261,8 +289,8 @@ class LLMAgents:
         Returns:
             (idea, code) tuple with idea description and strategy source code
         """
-        from reflection_prompts import ReflectionPrompts
-        from vrpagent_prompts import VRPAgentPrompts
+        from operators.prompts.reevo_prompts import ReflectionPrompts
+        from operators.prompts.vrpagent_prompt_generator import VRPAgentPrompts
 
         if mutation_type and parent_results:
             # VRPAGENT typed mutation with reflection
@@ -347,8 +375,8 @@ class LLMAgents:
         Returns:
             (idea, code) tuple with idea description and strategy source code
         """
-        from reflection_prompts import ReflectionPrompts
-        from vrpagent_prompts import VRPAgentPrompts
+        from operators.prompts.reevo_prompts import ReflectionPrompts
+        from operators.prompts.vrpagent_prompt_generator import VRPAgentPrompts
 
         if use_vrpagent_bias and parent1_results and parent2_results:
             # VRPAGENT biased crossover with reflection
@@ -431,7 +459,7 @@ class LLMAgents:
         Returns:
             (idea, code) tuple with generated idea description and strategy source code
         """
-        from vrpagent_prompts import VRPAgentPrompts
+        from operators.prompts.vrpagent_prompt_generator import VRPAgentPrompts
 
         prompt = VRPAgentPrompts.user_insight_generation(
             insight_type=insight_type,
@@ -487,7 +515,7 @@ class LLMAgents:
         Returns:
             Short-term reflection text analyzing the performance difference
         """
-        from reflection_prompts import ReflectionPrompts
+        from operators.prompts.reevo_prompts import ReflectionPrompts
 
         prompt = ReflectionPrompts.short_term_reflection(
             better_code=better_code,
@@ -592,7 +620,7 @@ Consider combining the superior selection criteria with complementary diversific
         Returns:
             Long-term reflection text with accumulated knowledge (capped at 12 bullets per section)
         """
-        from reflection_prompts import ReflectionPrompts
+        from operators.prompts.reevo_prompts import ReflectionPrompts
 
         prompt = ReflectionPrompts.long_term_reflection(
             recent_short_term_reflections=recent_short_term_reflections,
@@ -991,7 +1019,7 @@ Return only the complete {self.LANGUAGE} code, no explanations, no markdown.
         seeds = self._initial_seeds or []
         if seeds:
             return seeds[0][1]
-        from builder.ails_builder import get_ails_initial_seeds
+        from domains.ails_vrp.templates import get_ails_initial_seeds
         return get_ails_initial_seeds()[0][1]
 
     # Template-based seed strategies (kept for backward compat; now delegates to _fallback_seed_code)

@@ -5,7 +5,7 @@ from dao import DashboardDAO
 from style import UIConfig
 from utils import process_metrics_df, initialize_session_state, get_current_generation
 
-from views import metrics, code_diff, geneaology, strategy, history, embedding, cost
+from views import metrics, code_diff, genealogy, strategy, history, embedding, cost
 
 DB_PATH = "/data/evolution.db"
 
@@ -179,7 +179,7 @@ def main():
         active_graph_data = None
 
         with col1:
-            clicked_node, graph_info = geneaology.render_genealogy_graph(snapshot, st.session_state.selected_node_id)
+            clicked_node, graph_info = genealogy.render_genealogy_graph(snapshot, st.session_state.selected_node_id)
 
             if clicked_node is not None:
                 try:
@@ -196,7 +196,7 @@ def main():
         with col2:
             if active_graph_data:
                 G, active_node_id = active_graph_data
-                geneaology.render_node_inspector(G, active_node_id, project_language)
+                genealogy.render_node_inspector(G, active_node_id, project_language)
 
                 if st.session_state.selected_node_id is not None:
                      if st.button("Clear Selection", use_container_width=True):

@@ -10,13 +10,12 @@ Mirrors the design of evaluator_loader.py.
 import importlib.util
 import inspect
 import sys
-from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from loguru import logger
 
-from builder import BaseBuilder
-from core.registry import DomainPluginRegistry
+from building import BaseBuilder
+from domains.registry import DomainPluginRegistry
 import domains  # noqa: F401 — triggers auto-registration of all domain plugins
 
 
@@ -41,24 +40,7 @@ def _parse_builder_spec(spec: str) -> Tuple[str, Optional[str]]:
     return spec.strip(), None
 
 
-def _resolve_script_path(script_path: str) -> Path:
-    """Resolve a script path, trying multiple base directories."""
-    path = Path(script_path)
-    if path.is_absolute():
-        return path.resolve()
-
-    search_bases = [
-        Path.cwd(),
-        Path(__file__).parent.parent,          # evolver/
-        Path(__file__).parent.parent.parent,   # repo root
-        Path(__file__).parent,                 # evolver/src/
-    ]
-    for base in search_bases:
-        candidate = (base / path).resolve()
-        if candidate.exists():
-            return candidate
-
-    return (Path.cwd() / path).resolve()
+from utils.path_utils import resolve_script_path as _resolve_script_path
 
 
 def load_builder_from_script(builder_spec: str,

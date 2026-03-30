@@ -15,8 +15,8 @@ from typing import Dict, List
 
 from loguru import logger
 
-from embedding_service import EmbeddingService
-from evaluator import pareto_select
+from population.embedding_service import EmbeddingService
+from evaluation import pareto_select
 
 
 def _quality_diversity_select(

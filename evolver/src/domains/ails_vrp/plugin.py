@@ -10,8 +10,8 @@ from typing import Any, Dict, List
 
 from loguru import logger
 
-from core.base_domain_plugin import BaseDomainPlugin
-from core.registry import DomainPluginRegistry
+from domains.base_domain_plugin import BaseDomainPlugin
+from domains.registry import DomainPluginRegistry
 from .builder import AILSBuilder
 from .evaluator import AILSEvaluator
 from .templates import get_ails_initial_seeds

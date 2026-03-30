@@ -1,22 +1,18 @@
 """
-VRPAGENT Prompt Techniques integrated with ReEvo Reflection
+VRPAGENT prompt techniques integrated with ReEvo reflection.
 
-Combines:
-- VRPAGENT: Biased crossover, typed mutations, code length penalty
-- ReEvo: Short-term and long-term reflection for guidance
-
-Key additions from VRPAGENT:
-1. Biased Crossover: Explicit percentage bias toward elite parent
-2. Four Mutation Types: Ablation, Extend, Adjust-Parameters, Refactor
-3. Code Length Regularization: Prefer concise implementations
-
-Domain-agnostic: pass ``problem_description``, ``language``, and ``constraints`` to
-override the built-in AILS/VRP defaults.
+Contains:
+- VRPAgentPrompts: original static-method class (unchanged public API)
+- VRPAgentPromptGenerator: BasePromptGenerator adapter
 """
 
 from typing import Optional, Dict, List, Any
 import random
 from loguru import logger
+
+from operators.prompts.base_prompt_generator import BasePromptGenerator
+from operators.prompts.reevo_prompts import ReflectionPrompts
+
 
 class VRPAgentPrompts:
     """VRPAGENT-style prompts enhanced with ReEvo reflection."""
@@ -468,8 +464,6 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 
         return penalty
 
-    # Helper methods
-
     @staticmethod
     def user_insight_generation(
         insight_type: str,
@@ -484,17 +478,14 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         Generate strategy guided by user insight.
 
         Supports three insight types:
-        - "initialize": Create a new strategy from scratch based on user's idea (no related candidates)
-        - "mutate": Modify a single existing strategy guided by user's idea (one related candidate)
-        - "crossover": Combine features from multiple candidates based on user's idea (2+ related candidates)
+        - "initialize": Create a new strategy from scratch based on user's idea
+        - "mutate": Modify a single existing strategy guided by user's idea
+        - "crossover": Combine features from multiple candidates based on user's idea
 
         Args:
             insight_type: One of "initialize", "mutate", "crossover"
             idea: User's high-level idea/concept for the strategy
-            related_candidates: List of candidate dicts:
-                - None or empty for "initialize"
-                - Single candidate for "mutate"
-                - Multiple candidates for "crossover"
+            related_candidates: List of candidate dicts
             long_term_reflection: Optional accumulated evolutionary knowledge
 
         Returns:
@@ -681,24 +672,19 @@ Return your response exactly in this format with both IDEA and CODE sections."""
 
         return prompt
 
+    # Helper methods
+
     @staticmethod
     def _extract_class_name(code: str) -> str:
         """Extract class name from Java code."""
-        import re
-        match = re.search(r'public\s+class\s+(\w+)', code)
-        return match.group(1) if match else "UnknownClass"
+        from prompts.prompt_utils import extract_class_name
+        return extract_class_name(code)
 
     @staticmethod
     def _format_results(results: list) -> str:
         """Format evaluation results for display."""
-        lines = []
-        for r in results:
-            instance = r.get("instance", "unknown")
-            improvement = r.get("improvement", 0) * 100
-            initial = r.get("initial_cost", 0)
-            final = r.get("final_cost", 0)
-            lines.append(f"  • {instance}: {initial:.1f} → {final:.1f} (Δ={improvement:.3f}%)")
-        return "\n".join(lines)
+        from prompts.prompt_utils import format_results
+        return format_results(results)
 
     @staticmethod
     def _strength_label(strength: float) -> str:
@@ -711,78 +697,78 @@ Return your response exactly in this format with both IDEA and CODE sections."""
             return "High - Significant changes"
 
 
-# Example usage
-if __name__ == "__main__":
-    logger.debug("="*80)
-    logger.debug("VRPAGENT Prompts + ReEvo Reflection")
-    logger.debug("="*80)
+class VRPAgentPromptGenerator(BasePromptGenerator):
+    """BasePromptGenerator adapter backed by VRPAgentPrompts static methods."""
 
-    example_elite_code = """package EvoDestroy;
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
+    def short_term_reflection_prompt(
+        self,
+        better_code: str,
+        better_results: list,
+        worse_code: str,
+        worse_results: list,
+        problem_context: str = "Vehicle Routing Problem (VRP) with AILS",
+        language: str = "java",
+    ) -> str:
+        # VRPAGENT delegates short-term reflection to ReEvo
+        return ReflectionPrompts.short_term_reflection(
+            better_code, better_results, worse_code, worse_results,
+            problem_context, language,
+        )
 
-public class ClusteredKNNRemoval implements DestroyStrategy {
-    @Override
-    public Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                                     Node[] nodes, Instance instance, Random rand) {
-        List<Node> toRemove = new ArrayList<>();
-        // ... KNN-based clustering implementation ...
-        return toRemove.toArray(new Node[0]);
-    }
-}"""
+    def long_term_reflection_prompt(
+        self,
+        recent_reflections,
+        previous_reflection=None,
+        generation: int = 0,
+        problem_context: str = "VRP destroy strategies",
+    ) -> str:
+        return ReflectionPrompts.long_term_reflection(
+            recent_reflections, previous_reflection, generation, problem_context,
+        )
 
-    example_non_elite_code = """package EvoDestroy;
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
+    def crossover_prompt(
+        self,
+        better_code: str,
+        worse_code: str,
+        short_term_insight=None,
+        parent1_idea=None,
+        parent2_idea=None,
+        language: str = "java",
+        constraints=None,
+        better_results=None,
+        worse_results=None,
+        elite_bias: float = 0.75,
+    ) -> str:
+        return VRPAgentPrompts.biased_crossover(
+            better_code, better_results or [],
+            worse_code, worse_results or [],
+            short_term_reflection=short_term_insight,
+            elite_bias=elite_bias,
+            elite_idea=parent1_idea,
+            non_elite_idea=parent2_idea,
+            language=language,
+            constraints=constraints,
+        )
 
-public class RandomRemoval implements DestroyStrategy {
-    @Override
-    public Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                                     Node[] nodes, Instance instance, Random rand) {
-        List<Node> toRemove = new ArrayList<>();
-        // ... random selection ...
-        return toRemove.toArray(new Node[0]);
-    }
-}"""
-
-    elite_results = [
-        {"instance": "XL-n1048-k237", "initial_cost": 380246.0, "final_cost": 375120.0, "improvement": 0.0135},
-        {"instance": "XL-n2426-k391", "initial_cost": 852340.0, "final_cost": 843210.0, "improvement": 0.0107}
-    ]
-
-    non_elite_results = [
-        {"instance": "XL-n1048-k237", "initial_cost": 380246.0, "final_cost": 378890.0, "improvement": 0.0036},
-        {"instance": "XL-n2426-k391", "initial_cost": 852340.0, "final_cost": 849120.0, "improvement": 0.0038}
-    ]
-
-    reflection = "KNN clustering maintains spatial locality better than random selection."
-
-    logger.debug("\n=== BIASED CROSSOVER PROMPT ===\n")
-    prompt = VRPAgentPrompts.biased_crossover(
-        example_elite_code, elite_results,
-        example_non_elite_code, non_elite_results,
-        reflection, elite_bias=0.75
-    )
-    logger.debug(prompt[:800] + "...\n")
-
-    logger.debug("="*80)
-    logger.debug("\n=== ABLATION MUTATION PROMPT ===\n")
-    prompt = VRPAgentPrompts.typed_mutation(
-        example_elite_code, elite_results,
-        "ablation", reflection
-    )
-    logger.debug(prompt[:800] + "...\n")
-
-    logger.debug("="*80)
-    logger.debug("\n=== CODE LENGTH PENALTY ===\n")
-    penalty = VRPAgentPrompts.calculate_code_length_penalty(example_elite_code)
-    logger.debug(f"Code has {len(example_elite_code.split(chr(10)))} lines")
-    logger.debug(f"Penalty: {penalty:.6f}")
+    def mutation_prompt(
+        self,
+        elite_code: str,
+        elite_results: list,
+        long_term_reflection=None,
+        mutation_strength: float = 0.3,
+        parent_idea=None,
+        language: str = "java",
+        constraints=None,
+        mutation_type=None,
+        generation: int = 0,
+    ) -> str:
+        if mutation_type is None:
+            mutation_type = VRPAgentPrompts.select_mutation_type(elite_code, generation, long_term_reflection)
+        return VRPAgentPrompts.typed_mutation(
+            elite_code, elite_results, mutation_type,
+            long_term_reflection=long_term_reflection,
+            mutation_strength=mutation_strength,
+            parent_idea=parent_idea,
+            language=language,
+            constraints=constraints,
+        )

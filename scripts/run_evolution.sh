@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=evolver
-#SBATCH --account=def-YOUR_ACCOUNT  # CHANGE THIS
+#SBATCH --account=${SLURM_ACCOUNT:-def-YOUR_ACCOUNT}
 #SBATCH --time=4:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
@@ -20,6 +20,6 @@ source $HOME/envs/evolver/bin/activate
 cd "$SLURM_SUBMIT_DIR/evolver"
 
 # Run evolution with config file
-# Default: config.json, or specify relative to evolver/: python evo_agent.py myexp.json
-CONFIG=${1:-config.json}
+# Default: configs/default.json, or pass a path relative to evolver/: sbatch run_evolution.sh configs/quick_test.json
+CONFIG=${1:-configs/default.json}
 python evo_agent.py "$CONFIG"

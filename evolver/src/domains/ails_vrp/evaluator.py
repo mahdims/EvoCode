@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from loguru import logger
 
-from core.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
+from evaluation.base_evaluator import BaseEvaluator, EvalResult, SmokeTestResult
 from .evaluator_stub import Evaluator
 
 

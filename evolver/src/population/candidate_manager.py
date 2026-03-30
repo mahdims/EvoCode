@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from builder import BaseBuilder
+from building import BaseBuilder
 
 
 class CandidateManager:

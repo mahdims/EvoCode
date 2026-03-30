@@ -1,15 +1,16 @@
 """
-Reflection Prompts for ReEvo-style Dual-Process Evolution
+ReEvo-style dual-process reflection prompts.
 
-Following the ReEvo framework:
-- Short-Term Reflection: Compares two parents to guide crossover
-- Long-Term Reflection: Accumulates knowledge over generations to guide mutation
-
-Domain-agnostic: pass ``problem_context``, ``language``, and ``constraints`` to
-override the built-in AILS/VRP defaults.
+Contains:
+- ReflectionPrompts: original static-method class (unchanged public API)
+- ReEvoPromptGenerator: BasePromptGenerator adapter wrapping ReflectionPrompts
 """
 from __future__ import annotations
+from typing import Optional, List
 from loguru import logger
+
+from operators.prompts.base_prompt_generator import BasePromptGenerator
+
 
 class ReflectionPrompts:
     """Manages short-term and long-term reflection prompts."""
@@ -426,21 +427,14 @@ Return your response exactly in this format with both IDEA and CODE sections."""
     @staticmethod
     def _extract_class_name(code: str) -> str:
         """Extract class name from Java code."""
-        import re
-        match = re.search(r'public\s+class\s+(\w+)', code)
-        return match.group(1) if match else "UnknownClass"
+        from prompts.prompt_utils import extract_class_name
+        return extract_class_name(code)
 
     @staticmethod
     def _format_results(results: list) -> str:
         """Format evaluation results for display."""
-        lines = []
-        for r in results:
-            instance = r.get("instance", "unknown")
-            improvement = r.get("improvement", 0) * 100
-            initial = r.get("initial_cost", 0)
-            final = r.get("final_cost", 0)
-            lines.append(f"  • {instance}: {initial:.1f} → {final:.1f} (Δ={improvement:.3f}%)")
-        return "\n".join(lines)
+        from prompts.prompt_utils import format_results
+        return format_results(results)
 
     @staticmethod
     def _format_short_term_list(reflections: list[str]) -> str:
@@ -456,88 +450,65 @@ Return your response exactly in this format with both IDEA and CODE sections."""
         return "\n".join(formatted)
 
 
-# Example usage and testing
-if __name__ == "__main__":
-    logger.debug("=== SHORT-TERM REFLECTION PROMPT EXAMPLE ===\n")
+class ReEvoPromptGenerator(BasePromptGenerator):
+    """BasePromptGenerator adapter backed by ReflectionPrompts static methods."""
 
-    example_better_code = """package EvoDestroy;
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
+    def short_term_reflection_prompt(
+        self,
+        better_code: str,
+        better_results: list,
+        worse_code: str,
+        worse_results: list,
+        problem_context: str = "Vehicle Routing Problem (VRP) with AILS",
+        language: str = "java",
+    ) -> str:
+        return ReflectionPrompts.short_term_reflection(
+            better_code, better_results, worse_code, worse_results,
+            problem_context, language,
+        )
 
-public class ClusteredKNNRemoval implements DestroyStrategy {
-    @Override
-    public Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                                     Node[] nodes, Instance instance, Random rand) {
-        // Implementation using KNN clustering
-        List<Node> toRemove = new ArrayList<>();
-        // ... KNN-based selection ...
-        return toRemove.toArray(new Node[0]);
-    }
-}"""
+    def long_term_reflection_prompt(
+        self,
+        recent_reflections: List[str],
+        previous_reflection=None,
+        generation: int = 0,
+        problem_context: str = "VRP destroy strategies",
+    ) -> str:
+        return ReflectionPrompts.long_term_reflection(
+            recent_reflections, previous_reflection, generation, problem_context,
+        )
 
-    example_worse_code = """package EvoDestroy;
-import Solution.Node;
-import Solution.Route;
-import Data.Instance;
-import java.util.Random;
-import java.util.ArrayList;
-import java.util.List;
+    def crossover_prompt(
+        self,
+        better_code: str,
+        worse_code: str,
+        short_term_insight=None,
+        parent1_idea=None,
+        parent2_idea=None,
+        language: str = "java",
+        constraints=None,
+        better_results=None,
+        worse_results=None,
+        elite_bias: float = 0.75,
+    ) -> str:
+        return ReflectionPrompts.crossover_with_short_term_reflection(
+            better_code, worse_code, short_term_insight or "",
+            parent1_idea, parent2_idea, language, constraints,
+        )
 
-public class RandomRemoval implements DestroyStrategy {
-    @Override
-    public Node[] selectNodesToRemove(int numToRemove, Route[] routes, int numRoutes,
-                                     Node[] nodes, Instance instance, Random rand) {
-        // Random selection
-        List<Node> toRemove = new ArrayList<>();
-        // ... random selection ...
-        return toRemove.toArray(new Node[0]);
-    }
-}"""
-
-    example_better_results = [
-        {"instance": "XL-n1048-k237", "initial_cost": 380246.0, "final_cost": 375120.0, "improvement": 0.0135},
-        {"instance": "XL-n2426-k391", "initial_cost": 852340.0, "final_cost": 843210.0, "improvement": 0.0107}
-    ]
-
-    example_worse_results = [
-        {"instance": "XL-n1048-k237", "initial_cost": 380246.0, "final_cost": 378890.0, "improvement": 0.0036},
-        {"instance": "XL-n2426-k391", "initial_cost": 852340.0, "final_cost": 849120.0, "improvement": 0.0038}
-    ]
-
-    prompt = ReflectionPrompts.short_term_reflection(
-        example_better_code,
-        example_better_results,
-        example_worse_code,
-        example_worse_results
-    )
-
-    logger.debug(prompt)
-    logger.debug("\n" + "="*80 + "\n")
-
-    logger.debug("=== LONG-TERM REFLECTION PROMPT EXAMPLE ===\n")
-
-    example_short_term = [
-        "Clustered removal using KNN outperforms random removal because it exploits spatial locality, allowing the repair phase to reconstruct routes more efficiently.",
-        "Route-based selection performs better than global random selection because it maintains route structure and reduces cross-route dependencies."
-    ]
-
-    example_previous_knowledge = """
-## NODE SELECTION PRINCIPLES
-- KNN-based clustering helps maintain spatial locality
-- Random selection provides poor guidance for repair phase
-
-## ROUTE INTERACTION PRINCIPLES
-- Working within single routes is more effective than global scattering
-"""
-
-    prompt = ReflectionPrompts.long_term_reflection(
-        example_short_term,
-        example_previous_knowledge,
-        generation=5
-    )
-
-    logger.debug(prompt)
+    def mutation_prompt(
+        self,
+        elite_code: str,
+        elite_results: list,
+        long_term_reflection=None,
+        mutation_strength: float = 0.3,
+        parent_idea=None,
+        language: str = "java",
+        constraints=None,
+        mutation_type=None,
+        generation: int = 0,
+    ) -> str:
+        return ReflectionPrompts.mutation_with_long_term_reflection(
+            elite_code, elite_results, long_term_reflection or "",
+            mutation_strength, parent_idea, language, constraints,
+        )

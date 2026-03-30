@@ -11,8 +11,8 @@ from typing import Any, Dict, List
 
 from loguru import logger
 
-from core.base_domain_plugin import BaseDomainPlugin
-from core.registry import DomainPluginRegistry
+from domains.base_domain_plugin import BaseDomainPlugin
+from domains.registry import DomainPluginRegistry
 from .builder import VmSchedulingBuilder
 from .evaluator import VmSchedulingEvaluator
 from .templates import get_vm_initial_seeds

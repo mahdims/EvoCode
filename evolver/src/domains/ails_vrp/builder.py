@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from core.base_builder import BaseBuilder
+from building.base_builder import BaseBuilder
 from .templates import (
     AILS_CONSTRAINTS,
     AILS_PROBLEM_DESCRIPTION,

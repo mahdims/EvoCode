@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 
 from loguru import logger
 
-from core.base_builder import BaseBuilder
+from building.base_builder import BaseBuilder
 from .templates import (
     VM_CONSTRAINTS,
     VM_PROBLEM_DESCRIPTION,

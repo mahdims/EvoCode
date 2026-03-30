@@ -8,7 +8,7 @@ Used as a fallback when an evaluator's calculate_fitness() returns None.
 from typing import Dict, List, Optional
 from loguru import logger
 
-from core.base_evaluator import EvalResult
+from .base_evaluator import EvalResult
 
 
 class FitnessAggregator:

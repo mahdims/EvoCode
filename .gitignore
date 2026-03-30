@@ -3,3 +3,6 @@
 .applications
 *.log
 __pycache__/
+
+# Maven build artifacts
+applications/*/target/
