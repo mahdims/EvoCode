@@ -12,46 +12,11 @@ The search combines **ReEvo dual-process reflection** (verbal gradients from com
 
 ## Architecture
 
-```
-                              EVOLUTIONARY LOOP  (domain-agnostic)
-    ┌────────────────────────────────────────────────────────────────────┐
-    │                                                                    │
-    │   ┌─────────────┐        ┌─────────────────────────────────┐      │
-    │   │  GENERATOR  │        │          REFLECTOR              │      │
-    │   │             │        │                                 │      │
-    │   │  Crossover  │◄──────►│  Short-term: compare 2 parents  │      │
-    │   │             │        │  "Why does A outperform B?"     │      │
-    │   │  Mutation   │        │                                 │      │
-    │   │  (4 types)  │◄──────►│  Long-term: accumulated wisdom  │      │
-    │   └──────┬──────┘        │  "What patterns work well?"     │      │
-    │          │               └─────────────────────────────────┘      │
-    │          ▼                                                         │
-    │   ┌────────────────────────────────────────────────────────────┐  │
-    │   │  LLM  (Gemini by default; OpenAI-compatible / ModelArts)   │  │
-    │   │  parent code + reflection  →  new candidate source         │  │
-    │   └────────────────────────┬───────────────────────────────────┘  │
-    │                            ▼                                       │
-    │   ┌────────────────────────────────────────────────────────────┐  │
-    │   │  BUILDER  (domain)   source → runnable artifact            │  │
-    │   │  e.g. javac → plugin JAR, or a .py file, or a binary       │  │
-    │   └────────────────────────┬───────────────────────────────────┘  │
-    │                            ▼                                       │
-    │   ┌────────────────────────────────────────────────────────────┐  │
-    │   │  EVALUATOR (domain)  smoke test → run instances → scores   │  │
-    │   └────────────────────────┬───────────────────────────────────┘  │
-    │                            ▼                                       │
-    │   ┌────────────────────────────────────────────────────────────┐  │
-    │   │  POPULATION  idea-diversity check · embedding novelty ·    │  │
-    │   │              idea-history tracking                         │  │
-    │   └────────────────────────┬───────────────────────────────────┘  │
-    │                            ▼                                       │
-    │   ┌────────────────────────────────────────────────────────────┐  │
-    │   │  SELECTION  elitist (scalar fitness) or NSGA-II (Pareto)   │  │
-    │   └────────────────────────┬───────────────────────────────────┘  │
-    └────────────────────────────┼───────────────────────────────────────┘
-                                 ▼
-                    SQLite log  →  Streamlit dashboard
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="EvoCode architecture: population, reflector, generator and LLM feed a domain plugin of builder and evaluator, whose scores drive selection and the next generation" width="880">
+</p>
+
+Everything in blue is domain-agnostic and ships with the framework. Adding a new problem means writing the two orange boxes — a [builder](#option-b--custom-builder-only) and an [evaluator](#option-a--custom-evaluator-only) — and registering them as a [domain plugin](#option-c--full-domain-plugin). Each generation is also logged to SQLite for the [dashboard](#dashboard).
 
 ### What the framework provides
 
