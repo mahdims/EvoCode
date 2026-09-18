@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import time
 
@@ -7,7 +8,8 @@ from utils import process_metrics_df, initialize_session_state, get_current_gene
 
 from views import metrics, code_diff, genealogy, strategy, history, embedding, cost
 
-DB_PATH = "/data/evolution.db"
+# Must match persistence/db_logger.py, which writes the database this reads.
+DB_PATH = os.getenv("EVOCODE_DB_PATH", "/data/evolution.db")
 
 st.set_page_config(
     page_title="EvoCode DashBoard",

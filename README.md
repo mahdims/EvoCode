@@ -107,7 +107,7 @@ cp .env.example evolver/.env   # then add your API key
 | `GEMINI_MODEL` | Model name (default `gemini-2.0-flash-exp`) |
 | `GOOGLE_API_KEY` | Enables the code-embedding service for novelty/visualization (optional) |
 | `MODELARTS_API_KEY`, `MODELARTS_MODEL` | Credentials for the ModelArts / OpenAI-compatible adapter |
-| `EVOCODE_DB_PATH` | Where the evolution run **writes** its SQLite log (default `/data/evolution.db`) |
+| `EVOCODE_DB_PATH` | SQLite log location — read by both the evolution run and the dashboard (default `/data/evolution.db`) |
 
 The provider adapters live in [`evolver/src/operators/llm_agents.py`](evolver/src/operators/llm_agents.py) (`gemini`, `openai`, `modelarts`). The loop currently instantiates the Gemini adapter; to use another, construct `LLMAgents(provider="...")` directly.
 
@@ -400,7 +400,7 @@ class MyBuilder(BaseBuilder):
 
 Recommended for a genuinely new problem. This bundles builder, evaluator, LLM context, and seed templates into one registered plugin selected by `"domain": "my_domain"`.
 
-> **Where seeds actually come from.** `EvolutionLoop` passes only `builder.get_llm_context()` to the LLM agents, and they read the initial population from that dict's `"initial_seeds"` key. Your **builder** must therefore include the seeds in its context — both built-in builders do ([`ails_vrp/builder.py`](evolver/src/domains/ails_vrp/builder.py), [`vm_scheduling/builder.py`](evolver/src/domains/vm_scheduling/builder.py)). The plugin's `get_initial_seeds()` is required by the ABC but is not currently consulted by the loop, so a builder that omits `"initial_seeds"` will silently fall back to the AILS VRP templates.
+> **Where seeds come from.** The LLM agents read the initial population from `"initial_seeds"` in the builder's LLM context, so the **builder** is the primary source — both built-in builders put them there ([`ails_vrp/builder.py`](evolver/src/domains/ails_vrp/builder.py), [`vm_scheduling/builder.py`](evolver/src/domains/vm_scheduling/builder.py)). If the builder omits the key, `EvolutionLoop` falls back to the plugin's `get_initial_seeds()`. Only when neither supplies seeds — for instance a custom `builder_script` with no plugin — do you get the AILS VRP templates, and that logs a warning.
 
 **Layout** — under `evolver/src/domains/`, mirroring `ails_vrp/` and `vm_scheduling/`:
 
@@ -451,7 +451,7 @@ class MyDomainPlugin(BaseDomainPlugin):
     # What the LLM actually sees — the builder's context must carry "initial_seeds".
     def get_llm_context(self) -> Dict[str, Any]: return self._builder.get_llm_context()
 
-    # Required by the ABC; not consulted by EvolutionLoop today.
+    # Used when the builder's context has no "initial_seeds".
     def get_initial_seeds(self) -> List[tuple]:  return get_initial_seeds()
     def get_instances(self) -> List[str]:        return self._evaluator.get_instances()
 
@@ -497,7 +497,7 @@ Config keys belonging to other domains are simply ignored — each plugin reads 
 
 Optional override hooks: `get_source_path()` and `get_llm_context()` on the builder; `calculate_fitness()`, `get_score_names()`, and `get_instances()` on the evaluator; `get_instances()` on the plugin.
 
-> Two plugin hooks are currently **not wired into the loop**: `get_initial_seeds()` (seeds are read from the builder's LLM context, as noted above) and `get_instances()` (instances come from `config["target_instances"]`, falling back to `evaluator.get_instances()`). Implement them for completeness, but do not rely on them to deliver values.
+> Both plugin hooks act as **fallbacks**, not primary sources. Seeds come from the builder's LLM context first, then `plugin.get_initial_seeds()`. Instances come from `config["target_instances"]` first, then `plugin.get_instances()`, then `evaluator.get_instances()`.
 
 The registry ([`evolver/src/domains/registry.py`](evolver/src/domains/registry.py)) maps domain names to plugin classes via `DomainPluginRegistry.register(name, cls)` / `.create(name, config)` / `.list_domains()`.
 
@@ -523,7 +523,7 @@ Each candidate is written to `evolver/candidates/gen_XXXX/` (numbered by candida
 
 The candidates folder also holds `cache.json` (build cache keyed by source hash) and `embedding_cache.json`. Per-generation metrics, genealogy, strategies, and reflections go to the SQLite database at `EVOCODE_DB_PATH` (default `/data/evolution.db`).
 
-> `EVOCODE_DB_PATH` affects the **writer only**. The dashboard hardcodes `/data/evolution.db` ([`ui/frontend/src/dashboard.py`](ui/frontend/src/dashboard.py)), so pointing the run somewhere else — a local path, or cluster scratch — means the dashboard will sit empty. Leave it at the default unless you are reading the database yourself.
+> Set `EVOCODE_DB_PATH` for the dashboard process too, not just the run — both read the same variable, so they only agree if both see it.
 
 ---
 

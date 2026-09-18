@@ -160,6 +160,11 @@ class LLMAgents:
         self.DATA_STRUCTURES = ctx.get("data_structures", _DEFAULT_DATA)
         self.LANGUAGE = ctx.get("language", "java")
         self._initial_seeds: Optional[list] = ctx.get("initial_seeds", _get_seeds())
+        if ctx and not ctx.get("initial_seeds"):
+            logger.warning(
+                "[LLM] Domain context has no 'initial_seeds' — falling back to AILS VRP "
+                "templates. Add 'initial_seeds' to your builder's get_llm_context()."
+            )
         self._mutation_guidance: str = ctx.get(
             "mutation_guidance",
             "Focus on node selection logic: KNN, cost-based, route-aware."

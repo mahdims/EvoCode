@@ -186,13 +186,18 @@ class EvolutionLoop:
         else:
             self.evaluator = _get_plugin().get_evaluator()
 
-        # Target instances: explicit arg > config list > evaluator's own list
+        # The plugin exists only if builder/evaluator were not injected or scripted.
+        self.domain_plugin = _plugin
+
+        # Target instances: explicit arg > config list > plugin's list > evaluator's list
         if target_instances is not None:
             self.target_instances = target_instances
         elif _conf.get("target_instances"):
             self.target_instances = list(_conf["target_instances"])
         else:
-            self.target_instances = self.evaluator.get_instances()
+            plugin_instances = (self.domain_plugin.get_instances()
+                                if self.domain_plugin is not None else [])
+            self.target_instances = plugin_instances or self.evaluator.get_instances()
 
         # Keep evaluator in sync — it uses self.target_instances internally
         if hasattr(self.evaluator, "target_instances"):
@@ -217,8 +222,16 @@ class EvolutionLoop:
             primary_score=mo.primary_score,
         )
 
-        # Pass domain context from builder to LLM agents
+        # Pass domain context from builder to LLM agents.
+        # The builder is the primary source of seeds; fall back to the plugin's
+        # get_initial_seeds() so a domain that defines seeds only on the plugin
+        # is not silently seeded with another domain's templates.
         llm_context = self.builder.get_llm_context() if self.builder else {}
+        if not llm_context.get("initial_seeds") and self.domain_plugin is not None:
+            plugin_seeds = self.domain_plugin.get_initial_seeds()
+            if plugin_seeds:
+                llm_context = {**llm_context, "initial_seeds": plugin_seeds}
+                logger.debug("[SEEDS] Builder supplied none — using plugin.get_initial_seeds()")
         self.llm = LLMAgents(use_llm=True, domain_context=llm_context)
 
         # Population tracking
