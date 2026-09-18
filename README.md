@@ -107,7 +107,7 @@ cp .env.example evolver/.env   # then add your API key
 | `GEMINI_MODEL` | Model name (default `gemini-2.0-flash-exp`) |
 | `GOOGLE_API_KEY` | Enables the code-embedding service for novelty/visualization (optional) |
 | `MODELARTS_API_KEY`, `MODELARTS_MODEL` | Credentials for the ModelArts / OpenAI-compatible adapter |
-| `EVOCODE_DB_PATH` | SQLite path the dashboard reads (default `/data/evolution.db`) |
+| `EVOCODE_DB_PATH` | Where the evolution run **writes** its SQLite log (default `/data/evolution.db`) |
 
 The provider adapters live in [`evolver/src/operators/llm_agents.py`](evolver/src/operators/llm_agents.py) (`gemini`, `openai`, `modelarts`). The loop currently instantiates the Gemini adapter; to use another, construct `LLMAgents(provider="...")` directly.
 
@@ -207,7 +207,7 @@ These are read directly and must be present in any config file you write:
 |-----------|---------|-------------|
 | `experiment_name` | `"unnamed"` | Label for the run |
 | `domain` | `"ails_vrp"` | Registered domain plugin name |
-| `source_code_root` | per-domain | Path to the target application (relative to the repo root, or absolute) |
+| `source_code_root` | per-domain | Path to the target application. A relative path resolves against `evolver/`, **not** the repo root — which is why the shipped configs use `"../applications/AILS"`. Absolute paths are used as given. |
 | `target_instances` | `[]` | Evaluation instances; falls back to the evaluator's own list when omitted |
 | `smoke_test_instance` | `null` | Instance used for the fast pre-evaluation sanity check |
 | `dataset_dir` | `"Vrp_Set_X"` | Dataset folder under `applications/AILS/data/` (`ails_vrp` only; `default.json` sets `"XL"`) |
@@ -400,6 +400,8 @@ class MyBuilder(BaseBuilder):
 
 Recommended for a genuinely new problem. This bundles builder, evaluator, LLM context, and seed templates into one registered plugin selected by `"domain": "my_domain"`.
 
+> **Where seeds actually come from.** `EvolutionLoop` passes only `builder.get_llm_context()` to the LLM agents, and they read the initial population from that dict's `"initial_seeds"` key. Your **builder** must therefore include the seeds in its context — both built-in builders do ([`ails_vrp/builder.py`](evolver/src/domains/ails_vrp/builder.py), [`vm_scheduling/builder.py`](evolver/src/domains/vm_scheduling/builder.py)). The plugin's `get_initial_seeds()` is required by the ABC but is not currently consulted by the loop, so a builder that omits `"initial_seeds"` will silently fall back to the AILS VRP templates.
+
 **Layout** — under `evolver/src/domains/`, mirroring `ails_vrp/` and `vm_scheduling/`:
 
 ```
@@ -445,7 +447,11 @@ class MyDomainPlugin(BaseDomainPlugin):
 
     def get_builder(self) -> MyBuilder:          return self._builder
     def get_evaluator(self) -> MyEvaluator:      return self._evaluator
+
+    # What the LLM actually sees — the builder's context must carry "initial_seeds".
     def get_llm_context(self) -> Dict[str, Any]: return self._builder.get_llm_context()
+
+    # Required by the ABC; not consulted by EvolutionLoop today.
     def get_initial_seeds(self) -> List[tuple]:  return get_initial_seeds()
     def get_instances(self) -> List[str]:        return self._evaluator.get_instances()
 
@@ -491,6 +497,8 @@ Config keys belonging to other domains are simply ignored — each plugin reads 
 
 Optional override hooks: `get_source_path()` and `get_llm_context()` on the builder; `calculate_fitness()`, `get_score_names()`, and `get_instances()` on the evaluator; `get_instances()` on the plugin.
 
+> Two plugin hooks are currently **not wired into the loop**: `get_initial_seeds()` (seeds are read from the builder's LLM context, as noted above) and `get_instances()` (instances come from `config["target_instances"]`, falling back to `evaluator.get_instances()`). Implement them for completeness, but do not rely on them to deliver values.
+
 The registry ([`evolver/src/domains/registry.py`](evolver/src/domains/registry.py)) maps domain names to plugin classes via `DomainPluginRegistry.register(name, cls)` / `.create(name, config)` / `.list_domains()`.
 
 `ails_vrp` ([`evolver/src/domains/ails_vrp/`](evolver/src/domains/ails_vrp)) is the reference implementation; `vm_scheduling` ([`evolver/src/domains/vm_scheduling/`](evolver/src/domains/vm_scheduling)) is a second, leaner example of the same pattern.
@@ -513,7 +521,9 @@ Each candidate is written to `evolver/candidates/gen_XXXX/` (numbered by candida
 | `metadata.json` | Candidate ID, parent ID, mutation type, idea, artifact path, entry point, code hash, timestamp, plus domain-specific fields |
 | `idea_genXXXX.md` | The idea behind the candidate, tagged with the generation that produced it |
 
-The candidates folder also holds `cache.json` (build cache keyed by source hash) and `embedding_cache.json`. Per-generation metrics, genealogy, strategies, and reflections go to the SQLite database at `EVOCODE_DB_PATH` (default `/data/evolution.db`), which the dashboard reads.
+The candidates folder also holds `cache.json` (build cache keyed by source hash) and `embedding_cache.json`. Per-generation metrics, genealogy, strategies, and reflections go to the SQLite database at `EVOCODE_DB_PATH` (default `/data/evolution.db`).
+
+> `EVOCODE_DB_PATH` affects the **writer only**. The dashboard hardcodes `/data/evolution.db` ([`ui/frontend/src/dashboard.py`](ui/frontend/src/dashboard.py)), so pointing the run somewhere else — a local path, or cluster scratch — means the dashboard will sit empty. Leave it at the default unless you are reading the database yourself.
 
 ---
 
