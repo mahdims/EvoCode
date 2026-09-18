@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 375" width="880" height="375" role="img" aria-label="EvoCode architecture: population, reflector, generator and LLM feed a domain plugin of builder and evaluator, whose scores drive selection and the next generation">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#74859a"/>
+    </marker>
+    <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b6fd4"/>
+    </marker>
+    <style>
+      .t  { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+      .h  { font-size: 15px; font-weight: 700; }
+      .d  { font-size: 11.5px; }
+      .e  { font-size: 10.5px; fill: #74859a; font-style: italic; }
+      .g  { font-size: 11.5px; font-weight: 700; fill: #b36b00; letter-spacing: .02em; }
+      .bx { stroke-width: 2; rx: 10; }
+    </style>
+  </defs>
+
+  <!-- domain plugin group -->
+  <rect x="432" y="228" width="433" height="140" rx="12" fill="#fffaf2" stroke="#e08600" stroke-width="2" stroke-dasharray="6 4"/>
+  <text class="t g" x="648" y="248" text-anchor="middle">DOMAIN PLUGIN — THE PART YOU IMPLEMENT</text>
+
+  <!-- row 1 -->
+  <rect class="bx" x="25"  y="70" width="180" height="92" fill="#e7f0ff" stroke="#3b6fd4"/>
+  <text class="t h" x="115" y="104" text-anchor="middle" fill="#0b1b34">Population</text>
+  <text class="t d" x="115" y="124" text-anchor="middle" fill="#0b1b34">fitness · ideas</text>
+  <text class="t d" x="115" y="140" text-anchor="middle" fill="#0b1b34">diversity + novelty</text>
+
+  <rect class="bx" x="240" y="70" width="180" height="92" fill="#e7f0ff" stroke="#3b6fd4"/>
+  <text class="t h" x="330" y="104" text-anchor="middle" fill="#0b1b34">Reflector</text>
+  <text class="t d" x="330" y="124" text-anchor="middle" fill="#0b1b34">why does A beat B?</text>
+  <text class="t d" x="330" y="140" text-anchor="middle" fill="#0b1b34">what keeps working?</text>
+
+  <rect class="bx" x="455" y="70" width="180" height="92" fill="#e7f0ff" stroke="#3b6fd4"/>
+  <text class="t h" x="545" y="104" text-anchor="middle" fill="#0b1b34">Generator</text>
+  <text class="t d" x="545" y="124" text-anchor="middle" fill="#0b1b34">biased crossover</text>
+  <text class="t d" x="545" y="140" text-anchor="middle" fill="#0b1b34">typed mutation × 4</text>
+
+  <rect class="bx" x="670" y="70" width="180" height="92" fill="#f6e9ff" stroke="#9333ea"/>
+  <text class="t h" x="760" y="104" text-anchor="middle" fill="#2b0a45">LLM</text>
+  <text class="t d" x="760" y="124" text-anchor="middle" fill="#2b0a45">Gemini · OpenAI-compatible</text>
+  <text class="t d" x="760" y="140" text-anchor="middle" fill="#2b0a45">ModelArts</text>
+
+  <!-- row 2 -->
+  <rect class="bx" x="670" y="258" width="180" height="92" fill="#fff3e0" stroke="#e08600"/>
+  <text class="t h" x="760" y="292" text-anchor="middle" fill="#3d2600">Builder</text>
+  <text class="t d" x="760" y="312" text-anchor="middle" fill="#3d2600">source → artifact</text>
+  <text class="t d" x="760" y="328" text-anchor="middle" fill="#3d2600">JAR · script · binary</text>
+
+  <rect class="bx" x="455" y="258" width="180" height="92" fill="#fff3e0" stroke="#e08600"/>
+  <text class="t h" x="545" y="292" text-anchor="middle" fill="#3d2600">Evaluator</text>
+  <text class="t d" x="545" y="312" text-anchor="middle" fill="#3d2600">smoke test → run</text>
+  <text class="t d" x="545" y="328" text-anchor="middle" fill="#3d2600">→ named scores</text>
+
+  <rect class="bx" x="240" y="258" width="180" height="92" fill="#e7f0ff" stroke="#3b6fd4"/>
+  <text class="t h" x="330" y="292" text-anchor="middle" fill="#0b1b34">Selection</text>
+  <text class="t d" x="330" y="312" text-anchor="middle" fill="#0b1b34">elitist scalar</text>
+  <text class="t d" x="330" y="328" text-anchor="middle" fill="#0b1b34">or NSGA-II Pareto</text>
+
+  <!-- forward edges -->
+  <path d="M205,116 H236" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+
+  <path d="M420,116 H451" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+
+  <path d="M635,116 H666" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+
+  <path d="M760,162 V254" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+  <text class="t e" x="772" y="212" text-anchor="start">source</text>
+
+  <path d="M670,304 H639" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+
+  <path d="M455,304 H424" stroke="#74859a" stroke-width="1.8" fill="none" marker-end="url(#a)"/>
+
+  <!-- loop back to the population -->
+  <path d="M240,304 H115 V166" stroke="#3b6fd4" stroke-width="2.4" fill="none" marker-end="url(#aw)"/>
+  <text class="t e" x="131" y="206" text-anchor="start" fill="#3b6fd4">survivors —</text>
+  <text class="t e" x="131" y="221" text-anchor="start" fill="#3b6fd4">next generation</text>
+
+</svg>
