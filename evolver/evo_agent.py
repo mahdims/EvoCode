@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-EvoAgent - Main Entry Point for VRP Destroy Strategy Evolution
+EvoAgent - Main Entry Point for EvoCode
+
+LLM-guided evolution of code components. The problem being solved is chosen
+by the "domain" key in the config file (see src/domains/); the evolutionary
+machinery itself is domain-agnostic.
 
 Usage:
     python evo_agent.py                          # Use default configs/default.json
@@ -222,7 +226,7 @@ def run_evolution(config: dict, visualize: bool = False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="EvoAgent - VRP Destroy Strategy Evolution",
+        description="EvoAgent - LLM-guided evolution of code components",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

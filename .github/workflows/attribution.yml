@@ -1,0 +1,42 @@
+name: Attribution
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  no-ai-attribution:
+    name: No AI authorship
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit attribution
+        env:
+          # Passed as env rather than interpolated into the script body,
+          # so branch names can't be injected into the shell.
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              RANGE="${BASE_SHA}..${HEAD_SHA}"
+          elif [ "$EVENT_NAME" = "push" ] \
+               && [ -n "${BEFORE_SHA:-}" ] \
+               && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+              RANGE="${BEFORE_SHA}..${CURRENT_SHA}"
+          else
+              # First push of a branch, or a manual run: check the tip only.
+              RANGE="$CURRENT_SHA"
+          fi
+
+          echo "Checking range: ${RANGE}"
+          scripts/ci/check_attribution.sh "$RANGE"

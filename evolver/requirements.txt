@@ -1,5 +1,5 @@
-# Python dependencies for LLM-guided VRP destroy strategy evolution
-# Requires Python 3.12+ (recommended to use conda environment)
+# Python dependencies for EvoCode - LLM-guided evolution of code components
+# Requires Python 3.12+
 
 # Google Gemini API (for LLM-guided code generation)
 google-genai>=0.2.0
@@ -17,5 +17,6 @@ loguru
 networkx
 numpy
 
-# Note: Java JDK 11+ is also required for compiling generated strategies
-# Install via: apt install default-jdk (Linux) or download from Oracle/Adoptium
+# Note: JDK 21 is also required by the built-in Java domains (ails_vrp, vm_scheduling)
+# to compile generated code. Not needed for domains that build in another language.
+# Install via: apt install openjdk-21-jdk (Linux) or download from Adoptium
